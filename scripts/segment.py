@@ -87,8 +87,16 @@ try:
     REPO = "mlx-community/whisper-large-v3-turbo"
 
     def transkribiere(clip):
+        # temperature=0 fest verdrahtet. Der Standard ist eine Fallback-Kette
+        # (0.0 -> 0.2 -> ... -> 1.0): haelt Whisper eine Ausgabe fuer schwach,
+        # wuerfelt es mit hoeherer Temperatur neu. Derselbe Clip liefert dann
+        # bei jedem Lauf anderen Text - und weil pick_takes.py auf
+        # Textaehnlichkeit vergleicht, kippt damit die ganze Take-Auswahl
+        # (18.08.2026: zwei Laeufe auf derselben Datei ergaben 18 bzw. 16
+        # Fenster). Greedy statt Gluecksspiel.
         return mlx_whisper.transcribe(clip, path_or_hf_repo=REPO,
-                                      language=a.lang, fp16=True)["text"].strip()
+                                      language=a.lang, fp16=True,
+                                      temperature=0.0)["text"].strip()
     print(f"Transkription: mlx-whisper large-v3-turbo", flush=True)
 except ImportError:
     from faster_whisper import WhisperModel
