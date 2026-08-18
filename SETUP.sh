@@ -35,16 +35,42 @@ echo
 if [ "$FEHLT" = "1" ]; then
   echo "2. Fehlendes installieren"
   if ! command -v ffmpeg >/dev/null && [ ! -x "$HOME/bin/ffmpeg" ]; then
-    echo "   ffmpeg wird geladen (ca. 80 MB) ..."
+    # Quelle: ffmpeg.martin-riedl.de - liefert als einzige arm64 UND amd64
+    # nativ, je ein Binary pro ZIP ohne __MACOSX-Beiwerk.
+    # osxexperts (404/503 am 18.08.2026) und evermeet (Intel-only, laut
+    # Betreiber ausdruecklich kein Apple Silicon) sind raus.
+    # ffprobe kommt IMMER separat - kein Anbieter packt beide in ein Archiv,
+    # und die Pipeline braucht beide.
     mkdir -p "$HOME/bin"
-    ARCH=$([ "$(uname -m)" = "arm64" ] && echo "arm64" || echo "amd64")
-    curl -fsSL -o /tmp/ffmpeg.zip "https://www.osxexperts.net/ffmpeg8${ARCH}.zip" 2>/dev/null \
-      || curl -fsSL -o /tmp/ffmpeg.zip "https://evermeet.cx/ffmpeg/getrelease/zip"
-    unzip -o -q /tmp/ffmpeg.zip -d "$HOME/bin" && chmod +x "$HOME/bin/ffmpeg"
-    xattr -d com.apple.quarantine "$HOME/bin/ffmpeg" 2>/dev/null
-    "$HOME/bin/ffmpeg" -version >/dev/null 2>&1 && ok "ffmpeg installiert" \
-      || { fehl "ffmpeg-Installation fehlgeschlagen - bitte manuell: brew install ffmpeg"; exit 1; }
+    case "$(uname -m)" in arm64) A=arm64;; *) A=amd64;; esac
+    for WERKZEUG in ffmpeg ffprobe; do
+      echo "   $WERKZEUG wird geladen (ca. 28 MB) ..."
+      URL="https://ffmpeg.martin-riedl.de/redirect/latest/macos/$A/release/$WERKZEUG.zip"
+      GELADEN=0
+      # Der Redirect-Dienst antwortet kalt gelegentlich mit 404 - dreimal probieren
+      for VERSUCH in 1 2 3; do
+        if curl -fsSL --retry 2 -o "/tmp/$WERKZEUG.zip" "$URL" 2>/dev/null \
+           && unzip -tq "/tmp/$WERKZEUG.zip" >/dev/null 2>&1; then
+          GELADEN=1; break
+        fi
+        sleep 2
+      done
+      if [ "$GELADEN" != "1" ]; then
+        fehl "$WERKZEUG konnte nicht geladen werden - bitte manuell: brew install ffmpeg"
+        exit 1
+      fi
+      unzip -o -q -j "/tmp/$WERKZEUG.zip" -x '__MACOSX/*' -d "$HOME/bin"
+      chmod +x "$HOME/bin/$WERKZEUG"
+      xattr -cr "$HOME/bin/$WERKZEUG" 2>/dev/null
+      # Apple Silicon startet unsignierte Binaries nur mit Ad-hoc-Signatur
+      codesign -s - -f "$HOME/bin/$WERKZEUG" >/dev/null 2>&1
+    done
     export PATH="$HOME/bin:$PATH"
+    if "$HOME/bin/ffmpeg" -version >/dev/null 2>&1 && "$HOME/bin/ffprobe" -version >/dev/null 2>&1; then
+      ok "ffmpeg und ffprobe installiert"
+    else
+      fehl "Installation fehlgeschlagen - bitte manuell: brew install ffmpeg"; exit 1
+    fi
   fi
   echo
 fi
