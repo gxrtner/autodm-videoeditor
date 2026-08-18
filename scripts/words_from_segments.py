@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Baut words.json aus segments_wave.json.
 
-WARUM: cut.py verankert jedes Keeper-Fenster an Woertern aus words.json und
+WARUM: cut.py verankert jedes Keeper-Fenster an Wörtern aus words.json und
 verwirft das Fenster, wenn dort keins liegt ("no words in window"). Die
-Whisper-Wort-Timestamps sind bei Wiederholungen aber unbrauchbar (Woerter
-werden ueber Pausen gestreckt) - dann faellt ein korrektes Fenster still raus.
+Whisper-Wort-Timestamps sind bei Wiederholungen aber unbrauchbar (Wörter
+werden über Pausen gestreckt) - dann fällt ein korrektes Fenster still raus.
 
 FIX: Wir erzeugen words.json aus den Wellenform-Segmenten. Deren Zeiten stimmen
 per Definition, weil sie aus der Energie des Audios kommen. Der Text jedes
-Segments wird gleichmaessig ueber seine Dauer verteilt.
+Segments wird gleichmaessig über seine Dauer verteilt.
 
 Usage: python3 words_from_segments.py   (im Arbeitsordner)
 Schreibt words.json (Backup der alten Datei als words_whisper.json).
@@ -35,4 +35,4 @@ for s in segs:
         })
 
 json.dump(words, open("words.json", "w"), ensure_ascii=False, indent=0)
-print(f"{len(words)} Woerter aus {len(segs)} Wellenform-Segmenten -> words.json")
+print(f"{len(words)} Wörter aus {len(segs)} Wellenform-Segmenten -> words.json")

@@ -30,7 +30,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--head", type=float, default=0.03)
 ap.add_argument("--tail", type=float, default=0.07)
 ap.add_argument("--end-tail", type=float, default=0.0,
-                help="extra hold on the FINAL segment only — let the last line breathe / land "
+                help="extra hold on the FINAL segment only - let the last line breathe / land "
                      "the ending (extends into the real trailing silence, stops before any "
                      "resumed speech so it can't grab the next take). 0 = same as --tail.")
 ap.add_argument("--thr", type=float, default=0.005, help="energy threshold (breath<thr<word)")
@@ -82,7 +82,7 @@ segs = []
 for k in keepers:
     ws = words_in(k["a"], k["b"])
     if not ws:
-        print(f'!! no words in window {k["a"]}-{k["b"]} ({k.get("label","")}) — check keepers'); continue
+        print(f'!! no words in window {k["a"]}-{k["b"]} ({k.get("label","")}) - check keepers'); continue
     on, off = onset(ws[0]["start"]), offset(ws[-1]["end"])
     txt = "".join(x["word"] for x in ws).strip()
     segs.append({"label": k.get("label", ""), "on": on, "off": off, "text": txt})

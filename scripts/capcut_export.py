@@ -3,7 +3,7 @@
 Exportiert einen fertigen Schnitt als CapCut-Projekt zum manuellen Nachfeilen.
 
 Julian schneidet mit der Pipeline und feilt dann in CapCut nach (05.08.2026).
-Erzeugt wird ein NEUES Projekt — bestehende werden nie angefasst.
+Erzeugt wird ein NEUES Projekt - bestehende werden nie angefasst.
 
 Was im Projekt landet:
   Spur 1 (Haupt)   : die Keeper-Fenster als Segmente aus dem ROHVIDEO,
@@ -12,19 +12,19 @@ Was im Projekt landet:
   Spur 3 (Audio)   : Musikbett, falls angegeben
 
 Bewusst NICHT drin: Untertitel. Die macht die Pipeline besser (Style, Timing,
-Bildschnitt-Kopplung) — in CapCut waeren sie nur muehsam nachzubauen.
+Bildschnitt-Kopplung) - in CapCut wären sie nur mühsam nachzubauen.
 
 Usage:
   capcut_export.py <rohvideo> <keepers.json> [--broll <plan.json>]
                    [--musik <datei.mp3>] [--name "Projektname"]
 
 Zwei Dinge, die beim ersten Anlauf schiefgingen (05.08.2026):
-  * CapCut MUSS geschlossen sein — sonst schreibt es beim Beenden seinen
-    Speicherstand ueber das erzeugte Projekt. Wird hier geprueft.
+  * CapCut MUSS geschlossen sein - sonst schreibt es beim Beenden seinen
+    Speicherstand über das erzeugte Projekt. Wird hier geprüft.
   * Alle Medien landen IM Projektordner (`media/`). macOS gibt CapCut keinen
     Zugriff auf beliebige Ordner; extern liegende Dateien erscheinen als
-    "Kein Zugriff auf die Datei moeglich". Das Rohvideo wird dabei als
-    1080p-Arbeitsfassung kopiert — zum Nachfeilen reicht das, und 4K wuerde
+    "Kein Zugriff auf die Datei möglich". Das Rohvideo wird dabei als
+    1080p-Arbeitsfassung kopiert - zum Nachfeilen reicht das, und 4K würde
     die Platte sprengen.
 """
 import argparse, json, os, shutil, subprocess, sys, time, uuid
@@ -35,7 +35,7 @@ US = 1_000_000  # CapCut rechnet in Mikrosekunden
 LOUDNORM = "loudnorm=I=-14:TP=-1.5:LRA=11"  # Zielpegel wie im finalen Render
 
 
-def capcut_laeuft() -> bool:
+def capcut_läuft() -> bool:
     return subprocess.run(["pgrep", "-x", "CapCut"],
                           capture_output=True).returncode == 0
 
@@ -45,7 +45,7 @@ def uid() -> str:
 
 
 def video_info(pfad: str) -> dict:
-    """Breite, Hoehe, Dauer (s), fps — via ffprobe."""
+    """Breite, Höhe, Dauer (s), fps - via ffprobe."""
     os.environ["PATH"] = str(Path.home() / "bin") + ":" + os.environ["PATH"]
     r = subprocess.run(
         ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
@@ -60,9 +60,9 @@ def video_info(pfad: str) -> dict:
 
 def vorlage_finden() -> Path:
     """Ein bestehendes Projekt als Struktur-Vorlage. Wir ERFINDEN das Format
-    nicht, sondern uebernehmen eins, das CapCut selbst geschrieben hat —
+    nicht, sondern übernehmen eins, das CapCut selbst geschrieben hat -
     die Segment-Objekte haben ~40 Felder, von denen die meisten egal sind,
-    aber fehlen duerfen sie nicht."""
+    aber fehlen dürfen sie nicht."""
     kandidaten = []
     for p in CAPCUT.iterdir():
         if not (p.is_dir() and (p / "draft_info.json").exists()):
@@ -71,33 +71,33 @@ def vorlage_finden() -> Path:
             d = json.load(open(p / "draft_info.json"))
         except Exception:
             continue
-        # MUSS ein Video-Segment enthalten — daraus klonen wir die Struktur.
+        # MUSS ein Video-Segment enthalten - daraus klonen wir die Struktur.
         vids = [t for t in d.get("tracks", [])
                 if t.get("type") == "video" and t.get("segments")]
         if vids:
             kandidaten.append((len(d.get("tracks", [])), p))
     if not kandidaten:
         # Neuer Rechner ohne eigene Projekte: das mitgelieferte Geruest nehmen.
-        # Ein Video-Segment hat ~49 Felder, ein Material ~63 — die erfindet man
+        # Ein Video-Segment hat ~49 Felder, ein Material ~63 - die erfindet man
         # nicht, deshalb liegt eine echte, von CapCut geschriebene Vorlage bei.
         eigen = Path(__file__).resolve().parent.parent / "vorlage"
         if (eigen / "draft_info.json").exists():
             print(f"Vorlage: mitgeliefertes Geruest ({eigen})")
             return eigen
         sys.exit("Kein CapCut-Projekt mit Video-Segment gefunden und keine "
-                 "Vorlage im Paket — einmal ein Video in CapCut auf die "
+                 "Vorlage im Paket - einmal ein Video in CapCut auf die "
                  "Timeline ziehen und speichern.")
     # Wenigste Spuren = am einfachsten sauber zu leeren.
     return sorted(kandidaten, key=lambda x: x[0])[0][1]
 
 
 def mikro_sync(video: str, audio: str) -> float:
-    """Versatz der externen Mikro-Aufnahme gegenueber dem Kameraton, in Sekunden.
+    """Versatz der externen Mikro-Aufnahme gegenüber dem Kameraton, in Sekunden.
     Positiv = das Mikro lief bereits, als die Kamera startete.
 
     Julian nimmt Bild (Sony) und Ton (Ansteckmikro) getrennt auf; in CapCut
     hiess das bisher "Kombinationsclip". Statt nach Dateidauer zu raten wird
-    die Lautstaerke-Huellkurve beider Spuren kreuzkorreliert — das findet
+    die Lautstärke-Huellkurve beider Spuren kreuzkorreliert - das findet
     Zuordnung und Versatz in einem Schritt (06.08.2026)."""
     import numpy as np, wave, tempfile
     os.environ["PATH"] = str(Path.home() / "bin") + ":" + os.environ["PATH"]
@@ -124,18 +124,18 @@ def mikro_sync(video: str, audio: str) -> float:
     c = np.fft.irfft(np.fft.rfft(y, n) * np.conj(np.fft.rfft(x, n)), n)
     c = np.concatenate([c[-(len(x)-1):], c[:len(y)]])
     k = int(np.argmax(c))
-    off, guete = (k - (len(x) - 1)) * 0.01, float(c[k])
-    if guete < 0.4:
-        sys.exit(f"Mikro passt nicht zum Video (Guete {guete:.2f}) — falsche Datei?")
-    print(f"  Mikro-Sync: {off:+.2f}s (Guete {guete:.2f})")
+    off, güte = (k - (len(x) - 1)) * 0.01, float(c[k])
+    if güte < 0.4:
+        sys.exit(f"Mikro passt nicht zum Video (Güte {güte:.2f}) - falsche Datei?")
+    print(f"  Mikro-Sync: {off:+.2f}s (Güte {güte:.2f})")
     return off
 
 
 def audio_vorlage():
     """Audio-Material, -Segment, -Spur und Hilfsmaterialien aus einem Projekt,
-    das CapCut selbst geschrieben hat. Ein Audio-Segment haengt an fuenf
+    das CapCut selbst geschrieben hat. Ein Audio-Segment hängt an fünf
     Zusatzmaterialien (speed, beats, placeholder, channel-mapping, vocal
-    separation) — die werden mitgeklont, statt sie zu erfinden."""
+    separation) - die werden mitgeklont, statt sie zu erfinden."""
     for p in sorted((x for x in CAPCUT.iterdir() if (x / "draft_info.json").exists()),
                     key=lambda x: -(x / "draft_info.json").stat().st_mtime):
         try:
@@ -166,23 +166,23 @@ def audio_vorlage():
 def ins_projekt(quelle: str, ziel_dir: Path, als_proxy: bool = False,
                 audio=None, audio_off: float = 0.0, proxy_name=None) -> str:
     """Datei in den Projektordner legen. macOS gibt CapCut keinen Zugriff auf
-    beliebige Ordner — extern liegende Medien erscheinen als "Kein Zugriff auf
-    die Datei moeglich" (05.08.2026). Grosse Quellvideos werden dabei zu einer
-    1080p-Arbeitsfassung: zum Nachfeilen reicht das, 4K wuerde die Platte
-    sprengen (der finale Export laeuft ohnehin ueber die Pipeline)."""
+    beliebige Ordner - extern liegende Medien erscheinen als "Kein Zugriff auf
+    die Datei möglich" (05.08.2026). Große Quellvideos werden dabei zu einer
+    1080p-Arbeitsfassung: zum Nachfeilen reicht das, 4K würde die Platte
+    sprengen (der finale Export läuft ohnehin über die Pipeline)."""
     ziel_dir.mkdir(parents=True, exist_ok=True)
     if als_proxy:
         ziel = ziel_dir / (proxy_name or "quelle.mp4")
         print(f"  Arbeitsfassung 1080p: {Path(quelle).name} -> {ziel.name}")
-        # Die LANGE Kante auf 1920 — sonst wuerde ein Querformat-Video
-        # (3840x2160) auf Hoehe 1920 skaliert und damit 3413px breit statt
+        # Die LANGE Kante auf 1920 - sonst würde ein Querformat-Video
+        # (3840x2160) auf Höhe 1920 skaliert und damit 3413px breit statt
         # kleiner (06.08.2026).
         skal = ("scale='if(gt(iw,ih),1920,-2)':'if(gt(iw,ih),-2,1920)'"
                 ":force_original_aspect_ratio=decrease,scale=trunc(iw/2)*2:trunc(ih/2)*2")
         cmd = ["ffmpeg", "-y", "-v", "error"]
         if audio:
             # Externe Mikro-Spur so schieben, dass sie zum Bild passt:
-            # Mikro lief vor -> vorne wegschneiden; Mikro startete spaeter ->
+            # Mikro lief vor -> vorne wegschneiden; Mikro startete später ->
             # Stille voranstellen.
             if audio_off >= 0:
                 cmd += ["-i", quelle, "-ss", f"{audio_off:.3f}", "-i", audio]
@@ -190,7 +190,7 @@ def ins_projekt(quelle: str, ziel_dir: Path, als_proxy: bool = False,
             else:
                 cmd += ["-i", quelle, "-i", audio]
                 kette = [f"adelay={int(round(-audio_off*1000))}:all=1"]
-            # Rohes Ansteckmikro liegt bei ~-32 LUFS — in CapCut waere das
+            # Rohes Ansteckmikro liegt bei ~-32 LUFS - in CapCut wäre das
             # kaum hoerbar. Auf Zielpegel ziehen, damit die Arbeitsfassung
             # direkt brauchbar ist (06.08.2026). Der finale Render
             # normalisiert ohnehin selbst, das hier bleibt folgenlos.
@@ -275,17 +275,17 @@ def main():
     else:
         sys.exit("Entweder <rohvideo> <keepers> oder mindestens ein --teil angeben.")
 
-    # CapCut haelt ein geoeffnetes Projekt im Speicher und schreibt es beim
-    # Beenden zurueck — jede Aenderung hier waere still wieder weg
+    # CapCut hält ein geöffnetes Projekt im Speicher und schreibt es beim
+    # Beenden zurück - jede Änderung hier wäre still wieder weg
     # (05.08.2026 zweimal passiert, sah aus als haette der Export nicht
     # funktioniert). Deshalb harter Abbruch statt sinnlos zu schreiben.
-    if capcut_laeuft():
-        sys.exit("CapCut laeuft — bitte mit Cmd+Q beenden und neu starten.\n"
-                 "       Sonst ueberschreibt es das erzeugte Projekt beim Beenden.")
+    if capcut_läuft():
+        sys.exit("CapCut läuft - bitte mit Cmd+Q beenden und neu starten.\n"
+                 "       Sonst überschreibt es das erzeugte Projekt beim Beenden.")
 
     roh = str(Path(teile[0][0]).resolve())
     info = video_info(roh)
-    name = a.name or (Path(roh).stem + " — Nachfeilen")
+    name = a.name or (Path(roh).stem + " - Nachfeilen")
 
     vorlage_dir = vorlage_finden()
     print(f"Vorlage: {vorlage_dir.name}")
@@ -298,7 +298,7 @@ def main():
             seg_vorlage = t["segments"][0]
             break
     if seg_vorlage is None:
-        sys.exit("Vorlage enthaelt kein Video-Segment — anderes Projekt waehlen.")
+        sys.exit("Vorlage enthält kein Video-Segment - anderes Projekt wählen.")
 
     # --- Projekt leeren und neu aufbauen ---
     draft["id"] = uid()
@@ -309,7 +309,7 @@ def main():
               "speeds", "beats", "audio_fades", "placeholders"):
         draft.setdefault("materials", {})[k] = []
 
-    # Projektordner zuerst anlegen — die Medien wandern direkt hinein.
+    # Projektordner zuerst anlegen - die Medien wandern direkt hinein.
     ordner = CAPCUT / f"{time.strftime('%m%d')}-{name[:40]}"
     n = 1
     while ordner.exists():
@@ -324,7 +324,7 @@ def main():
     # auf derselben Zeitachse weiter.
     draft["materials"]["videos"] = []
     haupt, t = [], 0.0
-    tonstuecke = []          # fuer die getrennte Audiospur
+    tonstücke = []          # für die getrennte Audiospur
     for nr, (vid, kp, aud) in enumerate(teile, 1):
         quelle = str(Path(vid).resolve())
         if len(teile) > 1:
@@ -333,14 +333,14 @@ def main():
         off = mikro_sync(quelle, mikro) if mikro else 0.0
         # --audio-spur: Mikro NICHT ins Video mischen, sondern als eigene
         # Audiospur unter das Bild legen (Julian 11.08.2026). Der Kameraton
-        # bleibt am Clip, wird aber stummgeschaltet — so hat er die Stimme
+        # bleibt am Clip, wird aber stummgeschaltet - so hat er die Stimme
         # als eigene, bearbeitbare Spur.
         gemuxt = None if a.audio_spur else mikro
         lokal = ins_projekt(quelle, medien, als_proxy=True, audio=gemuxt,
                             audio_off=off,
                             proxy_name=f"quelle{nr}.mp4" if len(teile) > 1 else None)
         if a.audio_spur and mikro:
-            tonstuecke.append((mikro, off, kp, t))
+            tonstücke.append((mikro, off, kp, t))
         info_lokal = video_info(lokal)
         mat = material_video(lokal, info_lokal)
         draft["materials"]["videos"].append(mat)
@@ -359,13 +359,13 @@ def main():
           + (" (Kameraton stumm)" if a.audio_spur else ""))
 
     # --- Stimme als eigene Audiospur, deckungsgleich zum Bildschnitt ---
-    if tonstuecke:
+    if tonstücke:
         amat_v, aseg_v, aspur_v, aextras = audio_vorlage()
         if amat_v is None:
-            print("  !! keine Audio-Vorlage gefunden — Stimme bleibt ungenutzt")
+            print("  !! keine Audio-Vorlage gefunden - Stimme bleibt ungenutzt")
         else:
             asegs = []
-            for mikro, off, kp, basis in tonstuecke:
+            for mikro, off, kp, basis in tonstücke:
                 lokal = ins_projekt(mikro, medien)      # Datei 1:1 ins Projekt
                 dauer = float(subprocess.run(
                     ["ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -396,7 +396,7 @@ def main():
                     tt += d
             spur = dict(aspur_v); spur["id"] = uid(); spur["segments"] = asegs
             tracks.append(spur)
-            print(f"Stimmspur: {len(asegs)} Segmente aus {len(tonstuecke)} Aufnahme(n)")
+            print(f"Stimmspur: {len(asegs)} Segmente aus {len(tonstücke)} Aufnahme(n)")
 
     # Overlay-Spur: B-Roll / Inserts
     if a.broll and Path(a.broll).exists():
@@ -406,7 +406,7 @@ def main():
         for b in plan:
             p = basis / b.get("image_path", "")
             if not p.exists():
-                print(f"  uebersprungen (fehlt): {b.get('image_path')}")
+                print(f"  übersprungen (fehlt): {b.get('image_path')}")
                 continue
             p_lokal = ins_projekt(str(p), medien)
             bi = video_info(p_lokal)

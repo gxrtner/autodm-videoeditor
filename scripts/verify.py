@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Verify a cut. Two checks:
-  1. WAVEFORM  — leading dead air + inter-sentence gaps.
-  2. CONTENT   — re-transcribe the OUTPUT and flag any repeated word/phrase at a
+  1. WAVEFORM  - leading dead air + inter-sentence gaps.
+  2. CONTENT   - re-transcribe the OUTPUT and flag any repeated word/phrase at a
                  splice (the #1 way multi-take assembly goes wrong: a window's
                  onset/offset bleeds across a take boundary, or two takes of the
                  same line both get included -> "how how", "you're not lazy you're
                  not lazy", "it's on June 23. it's on June 23"). See SKILL lesson 7.
 
 Usage:  python3 verify.py OUTPUT.mp4 [thr=0.005]
-Exit code is NONZERO if a duplicate phrase is detected — so batch loops can gate
+Exit code is NONZERO if a duplicate phrase is detected - so batch loops can gate
 on it. Run from /tmp to avoid a local inspect.py shadowing the stdlib (lesson 6).
 
 A cut is NOT done until this reports `CONTENT: clean`.
@@ -48,7 +48,7 @@ for at, ms in gaps: print(f"  {at:6.2f}s : {ms} ms")
 # Words that are LEGITIMATELY said twice back-to-back in a script live here.
 # AUTODM 31.07.2026: deutsche Verstaerker ergaenzt. Die Liste war rein
 # englisch, dadurch meldete der Verify Julians "super, super wichtig"
-# faelschlich als doppelten Take und blockierte einen sauberen Schnitt.
+# fälschlich als doppelten Take und blockierte einen sauberen Schnitt.
 ALLOWED_UNIGRAM_REPEATS = {
     "more", "no", "so", "very", "really",
     "super", "sehr", "ganz", "viel", "voll", "richtig", "total",
@@ -74,14 +74,14 @@ dup = []
 try:
     from faster_whisper import WhisperModel
     # small.en (not base/tiny): accurate enough to (a) reliably hear numbers/dates/
-    # prices — a key payload word the model DROPS is a tell the audio is mushy/clipped
-    # — and (b) surface aborted-retake fragments a take trailed into (e.g. "June twen—"
+    # prices - a key payload word the model DROPS is a tell the audio is mushy/clipped
+    # - and (b) surface aborted-retake fragments a take trailed into (e.g. "June twen-"
     # before an appended clean "June 23"). base.en misses both. See SKILL lesson 7.
     # --- Integritaets-Check ZUERST ---
     # Eine beschaedigte Datei (z.B. wenn zwei Renders gleichzeitig auf denselben
-    # Namen schreiben) laesst whisper halluzinieren ("Untertitel im Auftrag des
-    # ZDF...") - der Inhalts-Check meldet dann faelschlich "clean". Deshalb erst
-    # dekodieren und auf Fehler pruefen.
+    # Namen schreiben) lässt whisper halluzinieren ("Untertitel im Auftrag des
+    # ZDF...") - der Inhalts-Check meldet dann fälschlich "clean". Deshalb erst
+    # dekodieren und auf Fehler prüfen.
     import subprocess
     _p = subprocess.run(["ffmpeg", "-v", "error", "-i", mp4, "-f", "null", "-"],
                         capture_output=True, text=True)
@@ -107,6 +107,6 @@ except ImportError:
 print(f"\nCONTENT: {content_status}")
 os.remove(wav)
 if dup:
-    print("!! FAIL — re-pick the take for the duplicated line (use ONE continuous take that\n"
+    print("!! FAIL - re-pick the take for the duplicated line (use ONE continuous take that\n"
           "   already contains both beats; don't stitch two takes of the same words).")
     sys.exit(1)

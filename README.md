@@ -26,9 +26,9 @@ Getrennt aufgenommener Mikro-Ton wird zugeordnet und synchronisiert.
 
 | | |
 |---|---|
-| **Mac** | Apple Silicon (M1–M4) oder Intel. Auf M-Chips läuft die Transkription rund zehnmal schneller. |
+| **Mac** | Apple Silicon (M1-M4) oder Intel. Auf M-Chips läuft die Transkription rund zehnmal schneller. |
 | **CapCut** | Installiert und **mindestens einmal gestartet**. Beim ersten Start legt es den Projektordner an, den dieses Werkzeug braucht. |
-| **Claude Code** | Im Terminal (`claude`). Die Web-Version reicht nicht — es müssen Programme auf deinem Rechner laufen. |
+| **Claude Code** | Im Terminal (`claude`). Die Web-Version reicht nicht - es müssen Programme auf deinem Rechner laufen. |
 | **Google-Drive-Ordner** | Freigegeben für „Jeder mit dem Link". |
 | **Platz** | Rechne mit dem Doppelten deiner Rohmaterial-Größe. |
 
@@ -38,7 +38,7 @@ Du brauchst **keine** Programmierkenntnisse. Du kopierst Befehle und drückst En
 
 ## 2. Einrichtung
 
-Einmalig, dauert etwa 15 Minuten — davon 12 Minuten Warten.
+Einmalig, dauert etwa 15 Minuten - davon 12 Minuten Warten.
 
 ### Schritt 1: Terminal öffnen
 
@@ -56,16 +56,16 @@ git clone <REPO-URL> ~/.claude/skills/autodm-videoeditor
 bash ~/.claude/skills/autodm-videoeditor/SETUP.sh
 ```
 
-Das Skript prüft deinen Rechner und installiert, was fehlt — alles im
+Das Skript prüft deinen Rechner und installiert, was fehlt - alles im
 Benutzerverzeichnis, ohne Systemänderung und ohne Passwort:
 
-- **ffmpeg** (~80 MB) — schneidet Video und Ton
-- **numpy** — für die Tonanalyse
-- **mlx-whisper** oder **faster-whisper** — erkennt gesprochene Sprache
-- **rclone** (~20 MB) — lädt aus Google Drive
+- **ffmpeg** (~80 MB) - schneidet Video und Ton
+- **numpy** - für die Tonanalyse
+- **mlx-whisper** oder **faster-whisper** - erkennt gesprochene Sprache
+- **rclone** (~20 MB) - lädt aus Google Drive
 
 Am Ende fragt es, ob das Sprachmodell (~1,5 GB) gleich geladen werden soll.
-**Sag ja**, wenn du gerade Zeit hast — sonst passiert es beim ersten Schnitt
+**Sag ja**, wenn du gerade Zeit hast - sonst passiert es beim ersten Schnitt
 und wirkt dort wie ein Hänger.
 
 ### Schritt 4: Claude neu starten
@@ -101,8 +101,8 @@ Claude führt dich durch `rclone config`. Wichtig dabei:
 
 - Typ: **`drive`**
 - `client_id` und `client_secret`: **leer lassen** (rclone bringt eigene mit)
-- Scope: **`2`** (nur lesen — sicherer)
-- Auto-Config: **`y`** — dann öffnet sich der Browser für den Google-Login
+- Scope: **`2`** (nur lesen - sicherer)
+- Auto-Config: **`y`** - dann öffnet sich der Browser für den Google-Login
 
 Das ist einmalig. Danach kennt rclone deinen Drive.
 
@@ -110,14 +110,14 @@ Das ist einmalig. Danach kennt rclone deinen Drive.
 
 | Schritt | Zeit |
 |---|---|
-| Download | je nach Leitung, bei 3 GB etwa 5–10 Min |
+| Download | je nach Leitung, bei 3 GB etwa 5-10 Min |
 | Tonzuordnung | wenige Sekunden je Video |
 | Schnitt | ~15 Sek je Video auf M-Chip, deutlich länger auf Intel |
-| Projekt anlegen | 1–2 Min je Video (die Arbeitsfassung wird berechnet) |
+| Projekt anlegen | 1-2 Min je Video (die Arbeitsfassung wird berechnet) |
 
 ### Wichtig: CapCut muss geschlossen sein
 
-Bevor Claude Projekte anlegt, muss CapCut mit **Cmd + Q** beendet sein — Fenster
+Bevor Claude Projekte anlegt, muss CapCut mit **Cmd + Q** beendet sein - Fenster
 schließen reicht nicht.
 
 Der Grund: CapCut hält ein geöffnetes Projekt im Arbeitsspeicher und schreibt es
@@ -131,7 +131,7 @@ ins Leere zu arbeiten.
 
 **Das ist der wichtigste Abschnitt.** Der Schnitt läuft vollautomatisch und
 liegt nicht immer richtig. Statt das ganze Video zu prüfen, springst du in
-CapCut von Marker zu Marker — normalerweise drei bis sieben Stellen.
+CapCut von Marker zu Marker - normalerweise drei bis sieben Stellen.
 
 Marker siehst du in CapCut als kleine Fähnchen über der Zeitleiste. Sie heißen
 `! grund: info`.
@@ -140,12 +140,12 @@ Marker siehst du in CapCut als kleine Fähnchen über der Zeitleiste. Sie heiße
 |---|---|---|
 | `! dicht` | Kurz vorher lag ein sehr ähnlicher Take | Ist der behaltene wirklich der bessere? |
 | `! abbruch` | Der Satz bricht mitten drin ab | Fehlt hinten etwas? |
-| `! luecke` | Davor wurde viel Rohmaterial verworfen | Fehlt eine ganze Aussage? |
+| `! lücke` | Davor wurde viel Rohmaterial verworfen | Fehlt eine ganze Aussage? |
 | `! kurz` | Fenster unter 0,8 Sekunden | Ist das eine Aussage oder nur ein Fragment? |
 | `! doppelt` | Zwei Fenster beginnen fast gleich | Steht etwas doppelt drin? |
 
 Alles zwischen den Markern hat die Automatik als eindeutig eingestuft. Das
-stimmt meistens — aber „meistens" ist nicht „immer". Wenn dir beim Ansehen etwas
+stimmt meistens - aber „meistens" ist nicht „immer". Wenn dir beim Ansehen etwas
 auffällt, korrigier es einfach auf der Zeitleiste.
 
 ---
@@ -158,14 +158,14 @@ Kurz erklärt, damit du die Ergebnisse einordnen kannst.
 
 Filmst du Bild und Ton getrennt (Kamera + Ansteckmikro), muss das Werkzeug
 wissen, welche Aufnahme zu welchem Video gehört. Es rät **nicht** anhand der
-Dateilänge — das führt in die Irre. Stattdessen vergleicht es den
+Dateilänge - das führt in die Irre. Stattdessen vergleicht es den
 Lautstärkeverlauf beider Spuren: Wo beide gleichzeitig laut und leise werden,
 gehören sie zusammen.
 
 Richtige Paare erreichen einen Wert um 0,85, falsche bleiben unter 0,15. Unter
 0,4 bricht das Werkzeug ab und meldet, dass die Aufnahme nicht passt.
 
-Nebenbei fällt der zeitliche Versatz ab — ob das Mikro schon lief, als die
+Nebenbei fällt der zeitliche Versatz ab - ob das Mikro schon lief, als die
 Kamera startete. Damit sitzt der Ton auf dem Bild.
 
 ### Schnitt nach Wellenform, nicht nach Transkript
@@ -174,7 +174,7 @@ Zuerst wird an der Tonspur gemessen, wo gesprochen wird und wo Pause ist. Nur
 diese Sprechblöcke werden einzeln transkribiert.
 
 Der Umweg hat einen Grund: Spracherkennung liefert bei mehrfach wiederholten
-Sätzen unbrauchbare Zeitangaben — sie überspringt Wiederholungen oder dehnt
+Sätzen unbrauchbare Zeitangaben - sie überspringt Wiederholungen oder dehnt
 einzelne Wörter über die Pausen. Die Wellenform sagt die Wahrheit darüber, wann
 jemand spricht.
 
@@ -186,7 +186,7 @@ wieder aus.
 
 Sprichst du einen Satz mehrfach, behält das Werkzeug den **letzten
 vollständigen**. Erkannt wird das über Textähnlichkeit und gleiche
-Satzanfänge — Letzteres aber nur innerhalb von 30 Sekunden.
+Satzanfänge - Letzteres aber nur innerhalb von 30 Sekunden.
 
 Diese Zeitgrenze ist wichtig: Parallel gebaute Sätze („Wenn du mehr *Views*
 willst…", „Wenn du mehr *Calls* willst…") beginnen identisch, sind aber
@@ -196,19 +196,19 @@ zusammenfallen.
 ### Das CapCut-Projekt
 
 CapCuts Projektformat ist nicht dokumentiert. Ein einzelnes Video-Segment hat
-rund 49 Felder, ein Material 63 — die meisten sind belanglos, fehlen dürfen sie
+rund 49 Felder, ein Material 63 - die meisten sind belanglos, fehlen dürfen sie
 trotzdem nicht.
 
 Das Werkzeug erfindet das Format deshalb nicht, sondern **klont** ein echtes,
 von CapCut geschriebenes Objekt und tauscht nur Pfade und Zeiten. Als Quelle
-dient eines deiner vorhandenen Projekte, oder — wenn du noch keines hast — ein
+dient eines deiner vorhandenen Projekte, oder - wenn du noch keines hast - ein
 mitgeliefertes Gerüst.
 
 Alle Medien landen **im Projektordner**. Das ist nicht Ordnungsliebe: macOS gibt
 CapCut keinen Zugriff auf beliebige Ordner, extern liegende Dateien erscheinen
 als „Kein Zugriff auf die Datei möglich".
 
-Das Video wird als 1080p-Arbeitsfassung abgelegt, nicht in 4K — zum Nachfeilen
+Das Video wird als 1080p-Arbeitsfassung abgelegt, nicht in 4K - zum Nachfeilen
 reicht das und spart erheblich Platz.
 
 ---
@@ -225,7 +225,7 @@ Er nimmt dir den Großteil ab, ersetzt aber nicht das Draufschauen. Die
 markierten Stellen sind Pflicht, der Rest ist Kür.
 
 Ein Muster, das die Automatik zuverlässig falsch macht: Wenn du dasselbe Video
-**zweimal komplett** durchziehst — erst ein Anlauf mit Abbrüchen, dann sauber —
+**zweimal komplett** durchziehst - erst ein Anlauf mit Abbrüchen, dann sauber -
 mischt sie manchmal beide Durchläufe. Sag Claude in dem Fall, dass es den
 zweiten Durchlauf nehmen soll.
 
@@ -250,9 +250,9 @@ unangetastet.
 
 | Meldung / Symptom | Ursache und Lösung |
 |---|---|
-| `CapCut laeuft — bitte mit Cmd+Q beenden` | Genau das. Fenster schließen reicht nicht. |
+| `CapCut läuft - bitte mit Cmd+Q beenden` | Genau das. Fenster schließen reicht nicht. |
 | `Kein CapCut-Projekt mit Video-Segment gefunden` | CapCut starten, irgendein Video auf die Zeitleiste ziehen, speichern, CapCut beenden. Danach nochmal. |
-| `Mikro passt nicht zum Video (Guete 0.2x)` | Die Aufnahme gehört zu einem anderen Video, oder eine der Spuren ist stumm. |
+| `Mikro passt nicht zum Video (Güte 0.2x)` | Die Aufnahme gehört zu einem anderen Video, oder eine der Spuren ist stumm. |
 | In CapCut: „Kein Zugriff auf die Datei möglich" | Eine Datei liegt außerhalb des Projektordners. Claude sagen, dass er sie hineinkopieren soll. |
 | Schnitt ist viel zu kurz | Vermutlich parallel gebaute Sätze. Claude bitten, die Take-Auswahl zu prüfen. |
 | Modell lädt „ewig" | Beim ersten Mal ~1,5 GB. Danach liegt es im Cache und startet sofort. |
@@ -280,7 +280,7 @@ Je Video entsteht ein Ordner `<name>_edit`:
 |---|---|
 | `audio16k.wav` | die extrahierte Tonspur |
 | `segments_wave.json` | alle Sprechblöcke mit Text und Zeiten |
-| `keepers.json` | die ausgewählten Fenster — **hier korrigierst du von Hand** |
+| `keepers.json` | die ausgewählten Fenster - **hier korrigierst du von Hand** |
 
 Willst du den Schnitt ändern, bearbeite `keepers.json` (jeder Eintrag ist ein
 Fenster mit `a` = Start und `b` = Ende in Sekunden) und lass `--auto` erneut
@@ -292,15 +292,15 @@ laufen.
 python3 $S/segment.py audio16k.wav --gap 0.35 --thr 0.005
 ```
 
-- `--gap` — wie lange eine Pause sein muss, damit ein neuer Block beginnt
-- `--thr` — ab welcher Lautstärke etwas als Sprache gilt
+- `--gap` - wie lange eine Pause sein muss, damit ein neuer Block beginnt
+- `--thr` - ab welcher Lautstärke etwas als Sprache gilt
 
 ```bash
 python3 $S/pick_takes.py --sim 0.68 --window 30
 ```
 
-- `--sim` — ab welcher Textähnlichkeit zwei Takes als derselbe Satz gelten
-- `--window` — in welchem Zeitfenster gleiche Satzanfänge als Wiederholung zählen
+- `--sim` - ab welcher Textähnlichkeit zwei Takes als derselbe Satz gelten
+- `--window` - in welchem Zeitfenster gleiche Satzanfänge als Wiederholung zählen
 
 ### Marker nachträglich setzen
 
@@ -315,5 +315,5 @@ python3 $S/capcut_marker.py "<projektname>" --edit <name>_edit --trocken
 ## Was dieses Werkzeug **nicht** macht
 
 Untertitel, Text-Einblendungen, B-Roll, Musik, Farbkorrektur, Export. Es
-liefert einen sauberen Rohschnitt als Ausgangspunkt — der Rest ist deine
+liefert einen sauberen Rohschnitt als Ausgangspunkt - der Rest ist deine
 Handschrift in CapCut.

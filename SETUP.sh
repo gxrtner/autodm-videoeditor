@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Einmalige Einrichtung. Prueft, was fehlt, und installiert es.
-# Alles landet im Benutzerverzeichnis — kein sudo, keine Systemaenderung.
+# Einmalige Einrichtung. Prüft, was fehlt, und installiert es.
+# Alles landet im Benutzerverzeichnis - kein sudo, keine Systemänderung.
 set -uo pipefail
 
 HIER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "=== AutoDM Videoeditor — Einrichtung ==="
+echo "=== AutoDM Videoeditor - Einrichtung ==="
 echo
 
 FEHLT=0
@@ -13,9 +13,9 @@ warn() { printf "  \033[33m!\033[0m     %s\n" "$1"; }
 fehl() { printf "  \033[31mfehlt\033[0m %s\n" "$1"; FEHLT=1; }
 
 # --- 1. Grundlagen ---
-echo "1. Rechner pruefen"
+echo "1. Rechner prüfen"
 if [ "$(uname)" != "Darwin" ]; then
-  fehl "Dieses Paket ist fuer macOS gebaut. Windows wird noch nicht unterstuetzt."
+  fehl "Dieses Paket ist für macOS gebaut. Windows wird noch nicht unterstützt."
   exit 1
 fi
 ok "macOS $(sw_vers -productVersion), $(uname -m)"
@@ -27,7 +27,7 @@ elif [ -x "$HOME/bin/ffmpeg" ]; then ok "ffmpeg (~/bin)"; export PATH="$HOME/bin
 else fehl "ffmpeg"; fi
 
 CAPCUT_DIR="$HOME/Movies/CapCut/User Data/Projects/com.lveditor.draft"
-[ -d "$CAPCUT_DIR" ] && ok "CapCut gefunden" || warn "CapCut-Ordner nicht gefunden — CapCut einmal starten und ein leeres Projekt anlegen"
+[ -d "$CAPCUT_DIR" ] && ok "CapCut gefunden" || warn "CapCut-Ordner nicht gefunden - CapCut einmal starten und ein leeres Projekt anlegen"
 
 echo
 
@@ -43,7 +43,7 @@ if [ "$FEHLT" = "1" ]; then
     unzip -o -q /tmp/ffmpeg.zip -d "$HOME/bin" && chmod +x "$HOME/bin/ffmpeg"
     xattr -d com.apple.quarantine "$HOME/bin/ffmpeg" 2>/dev/null
     "$HOME/bin/ffmpeg" -version >/dev/null 2>&1 && ok "ffmpeg installiert" \
-      || { fehl "ffmpeg-Installation fehlgeschlagen — bitte manuell: brew install ffmpeg"; exit 1; }
+      || { fehl "ffmpeg-Installation fehlgeschlagen - bitte manuell: brew install ffmpeg"; exit 1; }
     export PATH="$HOME/bin:$PATH"
   fi
   echo
@@ -72,7 +72,7 @@ else
 fi
 echo
 
-# --- 4. rclone fuer Google Drive ---
+# --- 4. rclone für Google Drive ---
 echo "4. Google Drive"
 if command -v rclone >/dev/null || [ -x "$HOME/bin/rclone" ]; then
   ok "rclone"
@@ -90,10 +90,10 @@ echo
 
 # --- 5. Sprachmodell vorladen ---
 echo "5. Sprachmodell"
-echo "   Beim ersten Schnitt laedt das Modell (ca. 1.5 GB). Jetzt vorladen? [j/N]"
+echo "   Beim ersten Schnitt lädt das Modell (ca. 1.5 GB). Jetzt vorladen? [j/N]"
 read -r -t 30 ANTWORT || ANTWORT="n"
 if [ "${ANTWORT:-n}" = "j" ]; then
-  python3 - <<'PY' || echo "   Vorladen fehlgeschlagen — passiert dann beim ersten Schnitt."
+  python3 - <<'PY' || echo "   Vorladen fehlgeschlagen - passiert dann beim ersten Schnitt."
 try:
     import mlx_whisper, numpy as np, tempfile, wave, os
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f: p=f.name
@@ -107,9 +107,9 @@ except ImportError:
     print("   Modell geladen.")
 PY
 else
-  echo "   Uebersprungen."
+  echo "   Übersprungen."
 fi
 echo
 
 echo "=== Fertig ==="
-echo "Naechster Schritt: den Text aus START.md in Claude Code einfuegen."
+echo "Nächster Schritt: den Text aus START.md in Claude Code einfügen."

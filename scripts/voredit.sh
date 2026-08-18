@@ -2,10 +2,10 @@
 # Voredit: Ordner rein -> geschnittene CapCut-Projekte mit Untertiteln raus.
 #
 # Julian legt Rohvideos und (optional) die Mikro-Aufnahmen in einen Ordner.
-# Alles Weitere laeuft hier durch:
+# Alles Weitere läuft hier durch:
 #   1. Mikro je Video per Tonkorrelation zuordnen
 #   2. Wellenform-Segmentierung + Take-Auswahl
-#   3. STOPP zur Freigabe  <- hier prueft Claude die Auswahl
+#   3. STOPP zur Freigabe  <- hier prüft Claude die Auswahl
 #   4. --auto: CapCut-Projekt je Video + Untertitel in Julians Stil
 #
 # Usage:
@@ -27,7 +27,7 @@ done
 ORDNER="$(cd "$ORDNER" && pwd)"
 
 if [ "$AUTO" = "1" ] && pgrep -x CapCut >/dev/null; then
-  echo "FEHLER: CapCut laeuft. Mit Cmd+Q beenden — sonst ueberschreibt es die"
+  echo "FEHLER: CapCut läuft. Mit Cmd+Q beenden - sonst überschreibt es die"
   echo "        erzeugten Projekte beim Beenden."; exit 1
 fi
 
@@ -36,7 +36,7 @@ echo "=== Voredit: $(basename "$ORDNER") ==="
 if [ ! -f "$PAARE" ]; then
   python3 "$SKILL/paare_finden.py" "$ORDNER" --json "$PAARE"
 else
-  echo "Zuordnung liegt vor ($(basename "$PAARE")) — zum Neuermitteln loeschen."
+  echo "Zuordnung liegt vor ($(basename "$PAARE")) - zum Neuermitteln löschen."
 fi
 echo
 
@@ -62,7 +62,7 @@ for eintrag in paare:
             if any(k in zeile for k in ("Format:", "Sprech-Segmente", "Transkription:", "FEHLER")):
                 print("   " + zeile.strip())
         if not keepers.exists():
-            print(f"   !! kein Schnitt entstanden — {r.stdout.splitlines()[-3:]}")
+            print(f"   !! kein Schnitt entstanden - {r.stdout.splitlines()[-3:]}")
             continue
 
     k = json.load(open(keepers))
@@ -74,9 +74,9 @@ for eintrag in paare:
 
     # --- Export ins CapCut-Projekt ---
     cmd = ["python3", str(skill / "capcut_export.py"), str(video), str(keepers),
-           "--name", f"{name} — Schnitt"]
+           "--name", f"{name} - Schnitt"]
     if eintrag.get("audio"):
-        # Stimme als EIGENE Spur unter dem Bild, Kameraton stumm — so kann der
+        # Stimme als EIGENE Spur unter dem Bild, Kameraton stumm - so kann der
         # Nutzer den Ton in CapCut getrennt bearbeiten (Julian 11.08.2026).
         cmd += ["--audio", eintrag["audio"], "--audio-spur"]
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -107,7 +107,7 @@ else
 >>> STOPP zur Freigabe.
     Take-Auswahl je Video liegt in <name>_edit/keepers.json,
     die Segment-Texte in <name>_edit/segments_wave.json.
-    Pruefen, bei Bedarf korrigieren, dann:
+    Prüfen, bei Bedarf korrigieren, dann:
 
       bash $SKILL/voredit.sh "$ORDNER" --auto
 EOF

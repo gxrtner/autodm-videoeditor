@@ -2,13 +2,13 @@
 """Waveform-basierte Sprech-Segmentierung + Take-Auswahl.
 
 WARUM: Whisper-Wort-Timestamps sind bei Wiederholungen unbrauchbar - whisper
-transkribiert Retakes oft gar nicht und streckt stattdessen einzelne Woerter
-ueber die Pause (Beispiel: "Levels" = 4.5s). Wer darauf schneidet, behaelt
+transkribiert Retakes oft gar nicht und streckt stattdessen einzelne Wörter
+über die Pause (Beispiel: "Levels" = 4.5s). Wer darauf schneidet, behält
 Pausen und Fehlstarts.
 
-STATTDESSEN: Die Wellenform sagt die Wahrheit ueber Sprache/Stille. Wir finden
+STATTDESSEN: Die Wellenform sagt die Wahrheit über Sprache/Stille. Wir finden
 echte Sprech-Segmente, transkribieren JEDES einzeln (kurze Clips = zuverlaessig),
-gruppieren Wiederholungen und behalten pro Zeile den LETZTEN vollstaendigen Take.
+gruppieren Wiederholungen und behalten pro Zeile den LETZTEN vollständigen Take.
 
 Usage:
   python3 segment.py audio16k.wav [--gap 0.35] [--thr 0.005] [--min 0.35]
@@ -23,7 +23,7 @@ ap.add_argument("--gap", type=float, default=0.35, help="Stille in s -> neues Se
 ap.add_argument("--thr", type=float, default=0.005, help="RMS-Schwelle Sprache vs. Atem")
 ap.add_argument("--hyst", type=float, default=0.40,
                 help="Ausstiegsschwelle als Anteil von --thr (Hysterese)")
-ap.add_argument("--min", type=float, default=0.30, help="kuerzere Segmente verwerfen")
+ap.add_argument("--min", type=float, default=0.30, help="kürzere Segmente verwerfen")
 ap.add_argument("--lang", default="de")
 ap.add_argument("--model", default="medium")
 a = ap.parse_args()
@@ -40,13 +40,13 @@ hop = int(sr * 0.01)
 frames = len(audio) // hop
 rms = np.array([np.sqrt(np.mean(audio[i*hop:(i+1)*hop] ** 2)) for i in range(frames)])
 
-# --- Segmente: zusammenhaengende Sprache, getrennt durch Stille >= gap ---
+# --- Segmente: zusammenhängende Sprache, getrennt durch Stille >= gap ---
 #
 # HYSTERESE (06.08.2026): Mit EINER Schwelle wurden Satzenden abgeschnitten.
-# Julians Stimme faellt zum Satzende hin ab ("...die Ziele deiner Traumfollower"),
-# rutscht unter thr und das Segment endete mitten im letzten Wort. Fuer
+# Julians Stimme fällt zum Satzende hin ab ("...die Ziele deiner Traumfollower"),
+# rutscht unter thr und das Segment endete mitten im letzten Wort. Für
 # pick_takes.py sah der GUTE Take dadurch abgebrochen aus und verlor gegen
-# einen frueheren Fehlstart. Deshalb: einsteigen bei thr, aussteigen erst bei
+# einen früheren Fehlstart. Deshalb: einsteigen bei thr, aussteigen erst bei
 # thr*hyst. Klassisches VAD-Muster.
 thr_in, thr_out = a.thr, a.thr * a.hyst
 gap_frames = int(a.gap / 0.01)
@@ -77,10 +77,10 @@ print(f"{len(segs)} Sprech-Segmente gefunden "
 #
 # MODELLWAHL (06.08.2026): Vorher faster_whisper "medium" auf CPU. Bei den
 # 1-2s kurzen Einzelclips lieferte das grob falsche Texte ("Roemmicht auf arme
-# Menschen" statt "Hoer nicht auf arme Menschen") — und mit falschen Texten
+# Menschen" statt "Hoer nicht auf arme Menschen") - und mit falschen Texten
 # kann pick_takes.py Wiederholungen nicht erkennen, der Schnitt wird Muell.
-# Gegenprobe: DERSELBE Ton am Stueck mit large-v3-turbo war fehlerfrei, es lag
-# also am Modell, nicht an der Aufnahme. mlx-whisper laeuft zudem auf der GPU
+# Gegenprobe: DERSELBE Ton am Stück mit large-v3-turbo war fehlerfrei, es lag
+# also am Modell, nicht an der Aufnahme. mlx-whisper läuft zudem auf der GPU
 # und cached das Modell prozessweit, die vielen Einzelaufrufe kosten also nichts.
 try:
     import mlx_whisper

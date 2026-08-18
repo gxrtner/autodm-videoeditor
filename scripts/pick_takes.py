@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Waehlt aus den Wellenform-Segmenten die Keeper aus.
+"""Wählt aus den Wellenform-Segmenten die Keeper aus.
 
 REGEL (Julians Vorgabe): Wird eine Zeile mehrfach gesprochen, gewinnt IMMER
-die LETZTE Version. Fehlstarts verlieren gegen den vollstaendigen spaeteren Take.
+die LETZTE Version. Fehlstarts verlieren gegen den vollständigen späteren Take.
 
 Drei Erkennungswege, weil Fehlstarts unterschiedlich aussehen:
-1. AEHNLICHKEIT  - fast gleicher Text -> selbe Zeile
-2. PRAEFIX/ANFANG - die ersten N Woerter stimmen ueberein ("nummer 3 notizen" vs
+1. ÄHNLICHKEIT  - fast gleicher Text -> selbe Zeile
+2. PRAEFIX/ANFANG - die ersten N Wörter stimmen überein ("nummer 3 notizen" vs
    "nummer 3 notizen machen notizen sind gut...") -> abgebrochener Take
 3. MUELL-FILTER  - Whisper halluziniert bei Stille/Atem typische Floskeln
-   ("vielen dank fuers zuhoeren", "untertitel von...") und produziert
+   ("vielen dank fürs zuhören", "untertitel von...") und produziert
    Ein-Wort-Fragmente. Beides raus.
 
 Usage: python3 pick_takes.py [--sim 0.68] [--head-words 3] [--min-dur 0.8]
@@ -20,27 +20,27 @@ from difflib import SequenceMatcher
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--sim", type=float, default=0.68)
-ap.add_argument("--head-words", type=int, default=3, help="gleiche Anfangswoerter -> selbe Zeile")
-ap.add_argument("--min-dur", type=float, default=0.8, help="kuerzere Segmente nur behalten wenn eigenstaendig")
+ap.add_argument("--head-words", type=int, default=3, help="gleiche Anfangswörter -> selbe Zeile")
+ap.add_argument("--min-dur", type=float, default=0.8, help="kürzere Segmente nur behalten wenn eigenstaendig")
 ap.add_argument("--min-words", type=int, default=3)
 ap.add_argument("--pad-head", type=float, default=0.06)
 ap.add_argument("--pad-tail", type=float, default=0.12)
 ap.add_argument("--merge-gap", type=float, default=0.60, help="dichter benachbarte Segmente zu einem Fenster verschmelzen")
 ap.add_argument("--window", type=float, default=30.0,
-                help="max. Abstand in s, in dem zwei Segmente Takes derselben Zeile sein koennen")
+                help="max. Abstand in s, in dem zwei Segmente Takes derselben Zeile sein können")
 a = ap.parse_args()
 
 segs = json.load(open("segments_wave.json"))
 
 # Typische Whisper-Halluzinationen bei Stille/Atem/Geraeusch
 JUNK = [
-    "vielen dank", "untertitel", "amara.org", "abonniert", "bis zum naechsten",
-    "danke fuers zuschauen", "danke fuer s zuhoeren", "zuhoeren", "musik",
+    "vielen dank", "untertitel", "amara.org", "abonniert", "bis zum nächsten",
+    "danke fürs zuschauen", "danke für s zuhören", "zuhören", "musik",
     "applaus", "copyright", "swr", "zdf", "ard",
 ]
 
 
-WORDNUM = {"eins":"1","zwei":"2","drei":"3","vier":"4","fuenf":"5","sechs":"6",
+WORDNUM = {"eins":"1","zwei":"2","drei":"3","vier":"4","fünf":"5","sechs":"6",
            "sieben":"7","acht":"8","neun":"9","zehn":"10","erstens":"1","zweitens":"2"}
 
 def norm(t):
@@ -52,7 +52,7 @@ def norm(t):
 
 
 def linekey(t):
-    """Zeilen-Schluessel: 'nummer 3' o.ae. - fasst alle Takes derselben Listenzeile zusammen."""
+    """Zeilen-Schlüssel: 'nummer 3' o.ae. - fasst alle Takes derselben Listenzeile zusammen."""
     n = norm(t)
     m = re.match(r"^nummer (\d+)", n)
     return f"nummer {m.group(1)}" if m else None
@@ -65,10 +65,10 @@ def is_junk(t):
     return any(j in n for j in JUNK)
 
 
-# Funktionswoerter tragen keine Aussage. Ohne sie wuerde "wenn du mehr VIEWS
-# willst" und "wenn du mehr CALLS willst" denselben Kopf ergeben — Julians
+# Funktionswörter tragen keine Aussage. Ohne sie würde "wenn du mehr VIEWS
+# willst" und "wenn du mehr CALLS willst" denselben Kopf ergeben - Julians
 # Skripte sind fast immer parallel gebaut, dadurch hat der head-Test ganze
-# Listen als Wiederholung verworfen (06.08.2026, C0761: 6s von 131s uebrig).
+# Listen als Wiederholung verworfen (06.08.2026, C0761: 6s von 131s übrig).
 STOPP = {
     "wenn", "wann", "weil", "dass", "ob", "als", "wie", "was", "wer", "wo",
     "du", "dir", "dich", "ich", "mir", "mich", "er", "sie", "es", "wir", "ihr",
@@ -76,15 +76,15 @@ STOPP = {
     "einer", "eines", "und", "oder", "aber", "dann", "so", "auch", "noch",
     "schon", "mal", "halt", "ja", "nein", "nicht", "kein", "keine", "nur",
     "mehr", "sehr", "ganz", "ist", "sind", "war", "waren", "hat", "haben",
-    "wird", "werden", "kann", "koennen", "muss", "muessen", "soll", "sollen",
-    "ueber", "fuer", "mit", "von", "zu", "aus", "auf", "in", "im", "am", "an",
+    "wird", "werden", "kann", "können", "muss", "müssen", "soll", "sollen",
+    "über", "für", "mit", "von", "zu", "aus", "auf", "in", "im", "am", "an",
     "bei", "nach", "vor", "um", "durch", "gegen", "ohne", "bis", "seit",
 }
 
 
 def head(t, k):
-    """Die ersten k INHALTSWOERTER. Faellt auf die rohen Woerter zurueck, wenn
-    nach dem Stoppwort-Filter zu wenig uebrig bleibt (z.B. reine Floskeln)."""
+    """Die ersten k INHALTSWOERTER. Fällt auf die rohen Wörter zurück, wenn
+    nach dem Stoppwort-Filter zu wenig übrig bleibt (z.B. reine Floskeln)."""
     words = [w for w in norm(t).split() if w not in STOPP]
     if len(words) < k:
         return ""
@@ -111,7 +111,7 @@ for s in segs:
         dropped.append((s, "fragment")); continue
     cand.append(s)
 
-# --- Gruppieren: spaeteres Segment gewinnt ---
+# --- Gruppieren: späteres Segment gewinnt ---
 alive = [True] * len(cand)
 groups = []
 for i in range(len(cand)):
@@ -123,13 +123,13 @@ for i in range(len(cand)):
             continue
         same = similar(cand[i]["text"], cand[j]["text"]) >= a.sim
         if not same:
-            # Der head-Test ist das SCHWACHE Signal: gleicher Anfang heisst nur
-            # dann Retake, wenn er dicht dahinter liegt — ein Fehlstart wird
-            # sofort neu angesetzt, nicht eine Minute spaeter. Ohne dieses
-            # Fenster fielen weit auseinanderliegende, nur aehnlich beginnende
-            # Saetze faelschlich zusammen. Echte Textgleichheit (similar) und
-            # explizite Zeilennummern brauchen das Fenster nicht — die sind
-            # eindeutig, auch ueber zwei komplette Listendurchlaeufe hinweg.
+            # Der head-Test ist das SCHWACHE Signal: gleicher Anfang heißt nur
+            # dann Retake, wenn er dicht dahinter liegt - ein Fehlstart wird
+            # sofort neu angesetzt, nicht eine Minute später. Ohne dieses
+            # Fenster fielen weit auseinanderliegende, nur ähnlich beginnende
+            # Sätze fälschlich zusammen. Echte Textgleichheit (similar) und
+            # explizite Zeilennummern brauchen das Fenster nicht - die sind
+            # eindeutig, auch über zwei komplette Listendurchlaeufe hinweg.
             if cand[j]["start"] - cand[i]["end"] <= a.window:
                 hi, hj = head(cand[i]["text"], a.head_words), head(cand[j]["text"], a.head_words)
                 if hi and hi == hj:
@@ -153,7 +153,7 @@ winners = sorted((cand[i] for i in range(len(cand)) if alive[i]), key=lambda s: 
 
 # Benachbarte Gewinner verschmelzen: liegen zwei Segmente dichter als merge_gap
 # beieinander, ist das eine natuerliche Sprechpause im selben Satz - getrennte
-# Fenster wuerden sich durchs Padding ueberlappen und cut.py verwirft sie dann.
+# Fenster würden sich durchs Padding überlappen und cut.py verwirft sie dann.
 merged = []
 for s in winners:
     if merged and s["start"] - merged[-1]["end"] < a.merge_gap:

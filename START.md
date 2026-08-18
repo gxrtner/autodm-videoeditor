@@ -15,7 +15,7 @@ und legst mir pro Video ein fertiges CapCut-Projekt an.
 
 Bitte:
 - Prüfe zuerst, ob alles eingerichtet ist. Wenn nicht, sag mir was zu tun ist.
-- Erklär mir kurz, was du gerade machst — ich bin kein Entwickler.
+- Erklär mir kurz, was du gerade machst - ich bin kein Entwickler.
 - Sag mir vorher Bescheid, wenn ich CapCut schließen muss.
 - Zeig mir am Ende, was du gefunden hast und wo ich nachschauen sollte.
 ```
@@ -48,5 +48,5 @@ Du bekommst pro Video ein CapCut-Projekt mit:
 
 Die Marker sind wichtig: Der Schnitt läuft vollautomatisch und liegt nicht
 immer richtig. Statt das ganze Video zu prüfen, springst du in CapCut von
-Marker zu Marker — meist sind es drei bis sieben Stellen. Was jeder Marker
+Marker zu Marker - meist sind es drei bis sieben Stellen. Was jeder Marker
 bedeutet, steht in SKILL.md.

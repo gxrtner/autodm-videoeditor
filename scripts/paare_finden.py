@@ -3,11 +3,11 @@
 Paart Videos mit den passenden externen Mikro-Aufnahmen in einem Ordner.
 
 Julian filmt Bild (Sony) und Ton (Ansteckmikro) getrennt. Welche Aufnahme zu
-welchem Clip gehoert, laesst sich NICHT an der Dateidauer ablesen — am
-06.08.2026 gehoerte die 131,6s-Aufnahme zum 123s-Video und nicht zum
-130,6s-Video. Zuverlaessig ist nur der Toninhalt: die Lautstaerke-Huellkurven
+welchem Clip gehört, lässt sich NICHT an der Dateidauer ablesen - am
+06.08.2026 gehörte die 131,6s-Aufnahme zum 123s-Video und nicht zum
+130,6s-Video. Zuverlaessig ist nur der Toninhalt: die Lautstärke-Huellkurven
 von Kameraton und Mikro werden kreuzkorreliert, das hoechste Maximum gewinnt.
-Richtige Paare erreichen ~0.85, falsche bleiben unter 0.15 — der Abstand ist
+Richtige Paare erreichen ~0.85, falsche bleiben unter 0.15 - der Abstand ist
 so gross, dass die Zuordnung eindeutig ist.
 
 Usage:
@@ -26,7 +26,7 @@ def ffmpeg_pfad():
 
 
 def huellkurve(pfad, max_sekunden=600):
-    """Lautstaerke je 10ms, mittelwertfrei und normiert."""
+    """Lautstärke je 10ms, mittelwertfrei und normiert."""
     import numpy as np, wave
     ffmpeg_pfad()
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
@@ -50,7 +50,7 @@ def huellkurve(pfad, max_sekunden=600):
 
 
 def versatz(video_env, audio_env):
-    """(Versatz in Sekunden, Guete). Positiv = Mikro lief schon, als die
+    """(Versatz in Sekunden, Güte). Positiv = Mikro lief schon, als die
     Kamera startete."""
     import numpy as np
     n = 1 << int(np.ceil(np.log2(len(video_env) + len(audio_env))))
@@ -78,7 +78,7 @@ def main():
         sys.exit(f"Keine Videos in {ordner}")
     print(f"{len(videos)} Videos, {len(audios)} Tonaufnahmen in {ordner.name}")
     if not audios:
-        print("Keine externen Aufnahmen — es wird der Kameraton verwendet.")
+        print("Keine externen Aufnahmen - es wird der Kameraton verwendet.")
 
     ev = {}
     for v in videos:
@@ -93,7 +93,7 @@ def main():
     ergebnis, vergeben = [], set()
     for v in videos:
         if v not in ev:
-            ergebnis.append({"video": str(v), "audio": None, "versatz": 0.0, "guete": 0.0})
+            ergebnis.append({"video": str(v), "audio": None, "versatz": 0.0, "güte": 0.0})
             continue
         best = (None, 0.0, -1.0)
         for p, e in ea.items():
@@ -104,14 +104,14 @@ def main():
                 best = (p, off, g)
         if best[0] and best[2] >= GUETE_MIN:
             vergeben.add(best[0])
-            print(f"  {v.name:26s} <- {best[0].name:28s} {best[1]:+7.2f}s  Guete {best[2]:.2f}")
+            print(f"  {v.name:26s} <- {best[0].name:28s} {best[1]:+7.2f}s  Güte {best[2]:.2f}")
             ergebnis.append({"video": str(v), "audio": str(best[0]),
-                             "versatz": round(best[1], 3), "guete": round(best[2], 3)})
+                             "versatz": round(best[1], 3), "güte": round(best[2], 3)})
         else:
-            g = f"beste Guete {best[2]:.2f}" if best[0] else "keine Kandidaten"
+            g = f"beste Güte {best[2]:.2f}" if best[0] else "keine Kandidaten"
             print(f"  {v.name:26s} <- KAMERATON ({g})")
             ergebnis.append({"video": str(v), "audio": None, "versatz": 0.0,
-                             "guete": round(max(best[2], 0.0), 3)})
+                             "güte": round(max(best[2], 0.0), 3)})
 
     if a.json:
         json.dump(ergebnis, open(a.json, "w"), ensure_ascii=False, indent=1)

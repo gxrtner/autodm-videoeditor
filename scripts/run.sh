@@ -7,9 +7,9 @@
 # Usage:
 #   run.sh <rohvideo> [--auto] [--stop-nach-cut] [--ziel <pfad>]
 #
-#   --auto            Take-Auswahl ohne Rueckfrage uebernehmen (sonst Stopp zur Freigabe)
+#   --auto            Take-Auswahl ohne Rueckfrage übernehmen (sonst Stopp zur Freigabe)
 #   --stop-nach-cut   Nur schneiden, keine Captions (wenn du in CapCut weiterarbeiten willst)
-#   --ziel            Zielordner ueberschreiben (Default: automatisch nach Orientierung)
+#   --ziel            Zielordner überschreiben (Default: automatisch nach Orientierung)
 set -euo pipefail
 
 export PATH="$HOME/bin:$PATH"          # ffmpeg/ffprobe liegen dort, nicht im PATH
@@ -30,7 +30,7 @@ done
 
 [ -z "$INPUT" ] && { echo "usage: run.sh <rohvideo> [--auto] [--stop-nach-cut] [--ziel <pfad>]"; exit 2; }
 [ -f "$INPUT" ] || { echo "FEHLER: '$INPUT' nicht gefunden"; exit 1; }
-# Absolut machen - spaeter wird ins Arbeitsverzeichnis gewechselt
+# Absolut machen - später wird ins Arbeitsverzeichnis gewechselt
 INPUT="$(cd "$(dirname "$INPUT")" && pwd)/$(basename "$INPUT")"
 
 command -v ffmpeg >/dev/null || { echo "FEHLER: ffmpeg fehlt (erwartet in ~/bin)"; exit 1; }
@@ -51,7 +51,7 @@ read -r W H < <(ffprobe -v error -select_streams v:0 -show_entries stream=width,
 # gefilmtes Sony-Material (3840x2160 + rotation=90) galt als longform
 # (06.08.2026, C0759-C0761). Deshalb die erste ZAHL herausfiltern.
 # `|| true`, weil Querformat-Material GAR KEINEN Rotationseintrag hat: grep
-# faende dann nichts, gaebe 1 zurueck, und `set -e pipefail` wuerde die
+# faende dann nichts, gaebe 1 zurück, und `set -e pipefail` würde die
 # Pipeline wortlos abbrechen (06.08.2026, C0768/C0769).
 ROT=$(ffprobe -v error -select_streams v:0 -show_entries stream_side_data=rotation \
       -of default=nw=1:nk=1 "$INPUT" 2>/dev/null | grep -Eo '^-?[0-9]+' | head -1 || true)
@@ -70,24 +70,24 @@ echo ""; echo "[1/6] Audio extrahieren ..."
 ffmpeg -y -v error -i "$INPUT" -vn -ac 1 -ar 16000 -c:a pcm_s16le audio16k.wav
 
 # --- 2. Wellenform-Segmente + Transkription pro Segment ---
-# Whisper-Wort-Timestamps sind bei Multi-Take unbrauchbar (Woerter werden ueber
+# Whisper-Wort-Timestamps sind bei Multi-Take unbrauchbar (Wörter werden über
 # Pausen gestreckt). Deshalb Segmente aus der Energie des Audios ableiten.
 if [ "$AUTO" = "1" ] && [ -f keepers.json ]; then
-  echo "[2/6] Vorhandene keepers.json gefunden — Auswahl wird NICHT ueberschrieben."
+  echo "[2/6] Vorhandene keepers.json gefunden - Auswahl wird NICHT überschrieben."
   echo "      ($(python3 -c "import json;print(len(json.load(open('keepers.json'))))") Fenster)"
-  echo "[3/6] uebersprungen"
+  echo "[3/6] übersprungen"
 else
   echo "[2/6] Sprech-Segmente finden (das dauert am laengsten) ..."
   python3 "$HIER/segment.py" audio16k.wav --gap 0.35 --lang de
-  echo "[3/6] Takes waehlen (Wiederholungen -> letzte Version) ..."
+  echo "[3/6] Takes wählen (Wiederholungen -> letzte Version) ..."
   python3 "$HIER/pick_takes.py" --sim 0.68 --head-words 3
 fi
 
 if [ "$AUTO" = "0" ]; then
   echo ""
   echo ">>> STOPP zur Freigabe."
-  echo "    Pruefe $WORK/keepers.json — besonders bei mehrteiligen Zeilen"
-  echo "    (Titel + Erklaerung getrennt gesprochen) waehlt die Automatik zu streng."
+  echo "    Prüfe $WORK/keepers.json - besonders bei mehrteiligen Zeilen"
+  echo "    (Titel + Erklärung getrennt gesprochen) wählt die Automatik zu streng."
   echo "    Segment-Texte zum Nachschlagen: $WORK/segments_wave.json"
   echo "    Weiter mit:  bash $0 \"$INPUT\" --auto"
   exit 0
@@ -95,16 +95,16 @@ fi
 
 # --- 4. Schnitt ---
 # words.json MUSS aus den Wellenform-Segmenten kommen. Sonst verwirft cut.py
-# still Fenster, in denen laut kaputter Whisper-Wortliste keine Woerter liegen.
+# still Fenster, in denen laut kaputter Whisper-Wortliste keine Wörter liegen.
 echo "[4/6] Schneiden ..."
 python3 "$HIER/words_from_segments.py"
 python3 "$HIER/cut.py" --input "$INPUT" --audio audio16k.wav \
   --words words.json --keepers keepers.json --out "cut.mp4" --head 0.03 --tail 0.12
 
-echo "[5/6] Pruefen (Doppelungen + Datei-Integritaet) ..."
+echo "[5/6] Prüfen (Doppelungen + Datei-Integritaet) ..."
 python3 "$HIER/verify.py" cut.mp4 || {
   echo ""
-  echo "!! VERIFY FEHLGESCHLAGEN — Schnitt NICHT uebernehmen."
+  echo "!! VERIFY FEHLGESCHLAGEN - Schnitt NICHT übernehmen."
   echo "   Bei Doppelungen: in keepers.json den doppelten Take entfernen,"
   echo "   dann erneut mit --auto starten."
   exit 1
@@ -125,20 +125,20 @@ print(pathlib.Path.home()/'.cache'/'video-edit'/f'{p.stem[:40]}_{hashlib.sha1(st
 ")
 mkdir -p "$EDIT_WORK"
 # transcribe_de.py statt transcribe.py: whisperx ist nicht installiert, und der
-# initial_prompt sorgt dafuer, dass "Erstens" nicht zu "1." normalisiert wird.
+# initial_prompt sorgt dafür, dass "Erstens" nicht zu "1." normalisiert wird.
 python3 "$HIER/transcribe_de.py" cut.mp4 "$EDIT_WORK/words.json"
-# QUALITY=max: echtes 4K (Julians Vorgabe 31.07.2026 "allerbeste Qualitaet").
-# "final" waere 1080p, "preview" 720p.
+# QUALITY=max: echtes 4K (Julians Vorgabe 31.07.2026 "allerbeste Qualität").
+# "final" wäre 1080p, "preview" 720p.
 # Julians Library (gx-*) hat Vorrang vor den BuildLoop-Tracks
 MUSIK="$(ls "$EDIT_SKILL/music/"gx-*.mp3 2>/dev/null | head -1)"
 [ -z "$MUSIK" ] && MUSIK="$(ls "$EDIT_SKILL/music/"*.mp3 2>/dev/null | head -1)"
 MUSIK="$(basename "${MUSIK:-}")"
 CAPTIONS=1 QUALITY=max ${MUSIK:+MUSIC_TRACK="$MUSIK"} \
   bash "$HIER/render.sh" "$WORK/cut.mp4" || {
-    echo "[warn] Render meldete einen Fehler — pruefe, ob trotzdem ein Ergebnis entstand"
+    echo "[warn] Render meldete einen Fehler - prüfe, ob trotzdem ein Ergebnis entstand"
   }
 
-# Reihenfolge = aufsteigende Qualitaet; die letzte existierende gewinnt.
+# Reihenfolge = aufsteigende Qualität; die letzte existierende gewinnt.
 OUT=""
 for kandidat in cut.preview.mp4 cut.enhanced.mp4 cut.scored.mp4 cut.final.mp4; do
   [ -f "$WORK/$kandidat" ] && OUT="$WORK/$kandidat"
