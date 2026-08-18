@@ -25,7 +25,7 @@ Bitte:
 ## Vorher: einmalige Einrichtung
 
 ```bash
-git clone <REPO-URL> ~/.claude/skills/autodm-videoeditor
+git clone https://github.com/gxrtner/autodm-videoeditor.git ~/.claude/skills/autodm-videoeditor
 bash ~/.claude/skills/autodm-videoeditor/SETUP.sh
 ```
 

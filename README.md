@@ -47,7 +47,7 @@ Einmalig, dauert etwa 15 Minuten - davon 12 Minuten Warten.
 ### Schritt 2: Paket laden
 
 ```bash
-git clone <REPO-URL> ~/.claude/skills/autodm-videoeditor
+git clone https://github.com/gxrtner/autodm-videoeditor.git ~/.claude/skills/autodm-videoeditor
 ```
 
 ### Schritt 3: Einrichtung starten
