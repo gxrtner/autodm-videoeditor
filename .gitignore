@@ -1,0 +1,10 @@
+# Arbeitsordner, die beim Schneiden entstehen
+*_edit/
+.voredit-paare.json
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
