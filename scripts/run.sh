@@ -163,7 +163,7 @@ if [ "$AUTO" = "0" ]; then
   echo "    Prüfe $WORK/keepers.json - besonders bei mehrteiligen Zeilen"
   echo "    (Titel + Erklärung getrennt gesprochen) wählt die Automatik zu streng."
   echo "    Segment-Texte zum Nachschlagen: $WORK/segments_wave.json"
-  echo "    Weiter mit:  bash $0 \"$INPUT\" --auto"
+  echo "    Weiter mit:  bash $0 \"$INPUT\" --auto --original"
   exit 0
 fi
 
