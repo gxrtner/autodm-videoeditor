@@ -6,7 +6,8 @@
 #   1. Mikro je Video per Tonkorrelation zuordnen
 #   2. Wellenform-Segmentierung + Take-Auswahl
 #   3. STOPP zur Freigabe  <- hier prüft Claude die Auswahl
-#   4. --auto: CapCut-Projekt je Video + Untertitel in Julians Stil
+#   4. --auto: CapCut-Projekt je Video mit Markern auf den unsicheren Stellen
+#      --original: Quellvideo direkt referenzieren statt als 1080p-Kopie
 #
 # Usage:
 #   voredit.sh <ordner>          Schneiden und Auswahl zeigen (Gate)
@@ -127,6 +128,6 @@ else
     die Segment-Texte in <name>_edit/segments_wave.json.
     Prüfen, bei Bedarf korrigieren, dann:
 
-      bash $SKILL/voredit.sh "$ORDNER" --auto --original
+      bash $SKILL/voredit.sh "$ORDNER" --auto --original --original
 EOF
 fi

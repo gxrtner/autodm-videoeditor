@@ -46,11 +46,20 @@ Danach Claude Code einmal neu starten, damit das Paket erkannt wird.
 
 Du bekommst pro Video ein CapCut-Projekt mit:
 
-- den guten Takes aneinandergereiht, Pausen und Fehlstarts raus
-- deinem Mikro-Ton als eigener Spur, synchron zum Bild
+- den guten Takes aneinandergereiht, Pausen, Fehlstarts und Regie-Ansagen raus
+- deinem Ton als eigener Spur, synchron zum Bild, Kameraton stumm
+- deinem Bild **unverändert** - kein Zoom, kein anderer Ausschnitt
 - **Markern auf den Stellen, an denen der Schnitt unsicher war**
 
-Die Marker sind wichtig: Der Schnitt läuft vollautomatisch und liegt nicht
-immer richtig. Statt das ganze Video zu prüfen, springst du in CapCut von
-Marker zu Marker - meist sind es drei bis sieben Stellen. Was jeder Marker
-bedeutet, steht in SKILL.md.
+Der Ablauf hat einen Zwischenschritt, der über die Qualität entscheidet: Nach
+dem Schnitt hält die Pipeline an, und Claude liest die Auswahl gegen die
+Transkripte, bevor die Projekte gebaut werden. Ohne diesen Schritt bekommst du
+den Rohvorschlag - der trifft rund 85 Prozent der richtigen Takes, und die
+fehlenden 15 Prozent sind genau die Stellen, die im fertigen Video auffallen.
+
+Die Marker zeigen danach auf das, was auch Claude nicht entscheiden kann - etwa
+welche von zwei gleichwertigen Fassungen dir besser gefällt. Meist sind es vier
+bis acht Stellen. Was jeder Marker bedeutet, steht in SKILL.md.
+
+**Sieh dir das Video trotzdem einmal ganz an, bevor du es postest.** Die Marker
+sind ein Hinweis, keine vollständige Fehlerliste.
