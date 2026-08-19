@@ -109,8 +109,17 @@ except ImportError:
     print(f"Transkription: faster-whisper {a.model} (mlx nicht verfuegbar)", flush=True)
 
 out = []
+# POLSTER (19.08.2026): Der Clip wurde bisher exakt an den Segmentgrenzen
+# geschnitten. Whisper verliert dabei das erste und letzte Wort, weil ihm der
+# Anlauf fehlt - gemessen an zwoelf Faellen aus fuenf Videos kippten dadurch
+# 8 Transkripte, eines sogar ins Gegenteil ("Chaos am Anfang bedeutet weniger
+# Churn" statt "KEIN Chaos am Anfang..."). Ein Viertelsekunde Ton auf jeder
+# Seite reicht. Die Segmentgrenzen selbst bleiben unberuehrt - das Polster
+# geht nur ins Modell, nicht in den Schnitt.
+POLSTER = 0.25
 for i, (s, e) in enumerate(segs):
-    clip = audio[int(s * sr):int(e * sr)]
+    va, vb = max(0.0, s - POLSTER), min(len(audio) / sr, e + POLSTER)
+    clip = audio[int(va * sr):int(vb * sr)]
     text = transkribiere(clip)
     out.append({"i": i, "start": round(s, 3), "end": round(e, 3),
                 "dur": round(e - s, 2), "text": text})

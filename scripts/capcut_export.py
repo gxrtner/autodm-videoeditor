@@ -241,6 +241,25 @@ def segment(vorlage: dict, material_id: str, ziel_start: float, ziel_dauer: floa
     for k in ("extra_material_refs", "keyframe_refs", "common_keyframes"):
         if k in s and isinstance(s[k], list):
             s[k] = []
+
+    # BILD UNANGETASTET LASSEN (Julian 19.08.2026).
+    #
+    # Ein CapCut-Segment hat rund 49 Felder, die man nicht von Hand erfindet -
+    # deshalb wird ein echtes Segment aus einem bestehenden Projekt geklont.
+    # Damit kommt aber auch dessen Bildgeometrie mit: die Vorlage stammte aus
+    # einem Projekt, in dem ein Zoom gesetzt war, und so bekam JEDES erzeugte
+    # Segment scale 1.208 und transform.y 0.0716 - das Bild war um 21 Prozent
+    # vergroessert und nach oben verschoben, obwohl niemand danach gefragt hat.
+    # Der Rohschnitt darf am Bild nichts aendern; Zoomfahrten und
+    # Bildausschnitt sind eine gestalterische Entscheidung und gehoeren dem
+    # Nutzer. Deshalb hier alles zuruecksetzen, was das Bild verschiebt,
+    # skaliert, dreht oder spiegelt.
+    s["clip"] = {"scale": {"x": 1.0, "y": 1.0}, "rotation": 0.0,
+                 "transform": {"x": 0.0, "y": 0.0},
+                 "flip": {"vertical": False, "horizontal": False}, "alpha": 1.0}
+    s["uniform_scale"] = {"on": True, "value": 1.0}
+    for k in ("crop", "crop_ratio", "crop_scale"):
+        s.pop(k, None)
     return s
 
 

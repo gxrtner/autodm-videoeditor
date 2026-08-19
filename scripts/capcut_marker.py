@@ -22,6 +22,16 @@ Woran eine Stelle als unsicher gilt (aus segments_wave.json + keepers.json):
              Fassung ist dabei rausgeflogen. Die Automatik nimmt die letzte
              vollständige Fassung - wenn du die Aussage in der Mitte am besten
              gesprochen hast, ist die hier verloren gegangen.
+  echo       Innerhalb EINES Fensters wird derselbe Satz zweimal gesprochen.
+             Das passiert, wenn ohne Pause neu angesetzt wird - die Wellenform
+             sieht dann nur einen Block, und keine Take-Auswahl kann das
+             trennen. Hier muss im Schnittprogramm von Hand getrennt werden.
+  ungeprüft  Das Fenster stand in keiner Wiederholungsgruppe - die Auswahl
+             hatte hier also nie eine Alternative zum Vergleich - UND es sieht
+             nach einem Bruchstück aus (endet auf "...", beginnt klein, sehr
+             wenige Wörter). Über die Hälfte der Laufzeit läuft ohne jede
+             Gegenprüfung durch, und genau dort sitzen die Fehler, die sonst
+             niemand findet.
   aufzählung Die zusammengefassten Fassungen unterscheiden sich inhaltlich
              stark. Dann war es womöglich gar keine Wiederholung, sondern eine
              Aufzählung ("zwei Reels pro Tag" / "zwei Karussells pro Woche") -
@@ -41,7 +51,8 @@ CAPCUT = Path.home() / "Movies/CapCut/User Data/Projects/com.lveditor.draft"
 US = 1_000_000
 FARBE = "#00c1cd"          # CapCuts Standard-Markerfarbe
 MIN_DAUER = 0.80
-LUECKE_AB = 8.0
+LUECKE_AB = 8.0        # (nicht mehr benutzt, siehe LUECKE_SPRACHE)
+LUECKE_SPRACHE = 3.0   # so viel verworfene Sprache rechtfertigt einen Marker
 ÄHNLICH_AB = 0.72
 UNEINIG_AB = 0.45     # ab hier gilt eine Gruppe als inhaltlich uneinig
 
@@ -72,7 +83,13 @@ def bricht_ab(text, folgt_direkt):
         return False
     if t.endswith("-"):          # abgeschnittenes Wort - sicherer Abbruch
         return True
-    if re.search(r"[.!?…,;:]$", t):
+    # "..." ist Whispers deutlichstes Abbruchsignal und wurde bisher als
+    # Satzende gewertet, weil der Punkt in der Zeichenklasse steht. Ueber fuenf
+    # Videos endeten 6 Fenster auf "..." - keines bekam einen Marker, darunter
+    # ein gekoepfter Eroeffnungssatz (19.08.2026).
+    if t.endswith("...") or t.endswith("…"):
+        return True
+    if re.search(r"[.!?,;:]$", t):
         return False
     if folgt_direkt:
         return False
@@ -85,6 +102,12 @@ def prüfe(segs, keepers, entscheidungen=None):
     # Entscheidungen auf den Rohsegment-Index des Siegers abbilden, damit sie
     # sich dem passenden Fenster zuordnen lassen.
     nach_sieger = {e["sieger"]["i"]: e for e in (entscheidungen or [])}
+    # Welche Segmente hat die Auswahl ueberhaupt gegen eine Alternative
+    # gehalten? Alles andere ist ungeprueft durchgelaufen.
+    geprueft = set()
+    for e in (entscheidungen or []):
+        geprueft.add(e["sieger"]["i"])
+        geprueft.update(x["i"] for x in e.get("verworfen", []))
     t = 0.0
     vorher_text = None
     for i, k in enumerate(keepers):
@@ -95,6 +118,34 @@ def prüfe(segs, keepers, entscheidungen=None):
 
         if dauer < MIN_DAUER:
             funde.append((t, "kurz", f"{dauer:.2f}s - evtl. Fragment"))
+
+        # --- Wiederholung INNERHALB des Fensters ---
+        # Wird ohne Pause neu angesetzt, steckt beides im selben Rohsegment.
+        # Die Take-Auswahl sieht davon nichts, weil sie auf Segmentebene
+        # arbeitet. Erkennbar ist es am Text selbst: zwei Teilsaetze, die
+        # einander stark aehneln (C0787: "Im Business denken die meisten
+        # anders ... Aber im Business denken die meisten anders").
+        teile = [x.strip() for x in re.split(r"[.!?]+", text) if len(x.strip()) > 18]
+        for x in range(len(teile)):
+            for y in range(x + 1, len(teile)):
+                if SequenceMatcher(None, norm(teile[x]), norm(teile[y])).ratio() >= 0.72:
+                    funde.append((t, "echo",
+                                  f'Satz doppelt gesprochen: "{teile[y][:38]}"'))
+                    break
+            else:
+                continue
+            break
+
+        # --- ungeprueftes Einzelsegment, das nach Bruchstueck aussieht ---
+        if entscheidungen is not None and drin and not any(x["i"] in geprueft for x in drin):
+            roh = text.strip()
+            inhalt = [w for w in norm(roh).split() if len(w) > 2]
+            verdacht = (roh.endswith("...") or roh.endswith("…")
+                        or (roh[:1].islower() and not roh.endswith((".", "!", "?")))
+                        or len(inhalt) < 4)
+            if verdacht:
+                funde.append((t, "ungeprüft",
+                              f'ohne Vergleichsfassung: "{roh[:40]}"'))
 
         # --- aus dem Entscheidungsprotokoll ---
         for s_ in drin:
@@ -115,7 +166,9 @@ def prüfe(segs, keepers, entscheidungen=None):
         folgt_direkt = (i + 1 < len(keepers)
                         and 0 <= keepers[i+1]["a"] - k["b"] < 1.2)
         if bricht_ab(text, folgt_direkt):
-            funde.append((t, "abbruch", text[-46:]))
+            # Vorne kuerzen, nicht hinten: text[-46:] schnitt mitten ins Wort und
+            # ergab im Projekt Titel wie "i tage die woche" (Rest von "drei").
+            funde.append((t, "abbruch", text[:46] + ("…" if len(text) > 46 else "")))
 
         # ähnlicher Take kurz davor im Rohmaterial verworfen?
         for s in segs:
@@ -128,9 +181,16 @@ def prüfe(segs, keepers, entscheidungen=None):
                 break
 
         # große Lücke davor -> könnte eine Aussage fehlen
+        # Gemessen wird die verworfene SPRACHE, nicht der Zeitabstand
+        # (19.08.2026). Vorher zaehlte die reine Luecke auf der Rohzeitachse -
+        # ueber fuenf Videos behaupteten die Marker zusammen 419s verworfenes
+        # Material, tatsaechlich waren es 69s. Neun der 23 Luecken-Marker
+        # standen vor gar keiner verworfenen Sprache, nur vor Stille.
         vor_ende = keepers[i-1]["b"] if i else 0.0
-        if k["a"] - vor_ende > LUECKE_AB:
-            funde.append((t, "lücke", f"{k['a']-vor_ende:.0f}s Rohmaterial verworfen"))
+        verworfen = sum(s["end"] - s["start"] for s in segs
+                        if s["start"] >= vor_ende - 0.05 and s["end"] <= k["a"] + 0.05)
+        if verworfen > LUECKE_SPRACHE:
+            funde.append((t, "lücke", f"{verworfen:.0f}s Sprache verworfen"))
 
         # beginnt wie das vorige Fenster?
         if vorher_text:

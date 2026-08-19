@@ -138,7 +138,12 @@ def main():
     ap.add_argument("--json", help="Ergebnis als JSON ablegen")
     a = ap.parse_args()
 
-    ordner = Path(a.ordner).expanduser()
+    # Absolut aufloesen (19.08.2026): Die Paarliste wird spaeter von run.sh
+    # gelesen, das in einem anderen Arbeitsverzeichnis laeuft. Mit relativen
+    # Pfaden findet es die Tondatei nicht und faellt still auf den Kameraton
+    # zurueck - genau der Fehler, der die ganze Analyse auf das schlechtere
+    # Mikrofon gestellt hat, ohne dass es jemand gemerkt haette.
+    ordner = Path(a.ordner).expanduser().resolve()
     if not ordner.is_dir():
         sys.exit(f"Kein Ordner: {ordner}")
 

@@ -149,9 +149,15 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--sim", type=float, default=0.68, help="Schwelle über Blockgrenzen hinweg")
 ap.add_argument("--head-words", type=int, default=3, help="gleiche Anfangswörter -> selbe Zeile")
 ap.add_argument("--min-dur", type=float, default=0.8, help="kürzere Segmente nur behalten wenn eigenstaendig")
+ap.add_argument("--ansagen-behalten", action="store_true",
+                help="Regie-Ansagen (\"Hook Nummer 2\", \"So.\") nicht wegfiltern")
 ap.add_argument("--min-words", type=int, default=3)
+ap.add_argument("--min-dur-worte", type=float, default=1.2,
+                help="bis zu dieser Dauer zaehlt auch die Wortzahl als Ausschluss")
 ap.add_argument("--pad-head", type=float, default=0.06)
 ap.add_argument("--pad-tail", type=float, default=0.12)
+ap.add_argument("--merge-sim", type=float, default=0.55,
+                help="ab dieser Aehnlichkeit gilt ein dichter Nachbar als Wiederholung, nicht als Fortsetzung")
 ap.add_argument("--merge-gap", type=float, default=0.60, help="dichter benachbarte Segmente zu einem Fenster verschmelzen")
 ap.add_argument("--schluss-stille", type=float, default=30.0,
                 help="Stille in s am Ende, ab der Nachgeplauder verworfen wird (0 = aus)")
@@ -238,6 +244,25 @@ def linekey(t):
     return f"nummer {m.group(1)}" if m else None
 
 
+# Regie-Ansagen: Julian sagt vor einem Take an, was jetzt kommt ("Hook Nummer
+# 2", "Und jetzt kommt die Karte", "Die Fokussierung und los"), oder gibt sich
+# selbst ein Startsignal ("So.", "Mhm.", "Test"). Das ist kein Inhalt, sondern
+# Kommando an sich selbst - es gehoert nicht ins Video. Erkennbar sind sie an
+# einem festen Wortschatz UND daran, dass sie kurz sind: ein langer Satz, der
+# zufaellig "hook" enthaelt, ist eine Aussage ueber Hooks (19.08.2026).
+ANSAGE = re.compile(
+    r"^(so|okay|ok|alles klar|mhm|hm+|aeh+|und los|los gehts?|test|"
+    r"(hook|take|version|variante|nummer|punkt|teil)\s*(nummer\s*)?\d*|"
+    r".{0,24}\b(und los|nochmal|von vorne|jetzt kommt|kommt jetzt|zweiter versuch)\b.{0,16})$")
+
+
+def ist_ansage(t, dur):
+    """Regie-Ansage statt Inhalt? Nur bei kurzen Segmenten."""
+    if dur > 3.0:
+        return False
+    return bool(ANSAGE.match(norm(t)))
+
+
 def is_junk(t):
     n = norm(t)
     if not n:
@@ -316,13 +341,22 @@ for s in segs:
     n = norm(s["text"])
     if is_junk(s["text"]):
         dropped.append((s, "muell/halluzination")); continue
+    if not a.ansagen_behalten and ist_ansage(s["text"], s["dur"]):
+        dropped.append((s, "regie-ansage")); continue
     # ODER, nicht UND (18.08.2026). Vorher musste ein Segment BEIDES sein -
     # zu wenige Woerter UND zu kurz. "Ja, da fuhre." dauert 0.36s, hat aber
     # genau 3 Woerter und rutschte durch; "anstatt auf" hat 2 Woerter, dauert
     # aber 1.22s.
     #
     # AUSNAHME Listenzeilen: "Nummer 3." ist kurz und trotzdem gewollt.
-    if not linekey(s["text"]) and (len(n.split()) < a.min_words or s["dur"] < a.min_dur):
+    # Die Wortzahl allein taugt nicht als Ausschluss (19.08.2026): "Folge
+    # Julian" sind zwei Woerter und trotzdem der komplette CTA - ueber fuenf
+    # Videos fielen so ein ganzer Call-to-Action und mehrere Satzpointen still
+    # heraus. Zu wenige Woerter zaehlt deshalb nur noch, wenn das Segment auch
+    # kurz ist; laenger gesprochene Zwei-Wort-Segmente sind echte Aussagen.
+    zu_kurz = s["dur"] < a.min_dur
+    zu_wortarm = len(n.split()) < a.min_words and s["dur"] < a.min_dur_worte
+    if not linekey(s["text"]) and (zu_kurz or zu_wortarm):
         dropped.append((s, "fragment")); continue
     cand.append(s)
 
@@ -524,8 +558,26 @@ winners = sorted((cand[i] for i in range(len(cand)) if alive[i]), key=lambda s: 
 merged = []
 for s in winners:
     if merged and s["start"] - merged[-1]["end"] < a.merge_gap:
-        merged[-1] = {**merged[-1], "end": s["end"],
-                      "text": merged[-1]["text"] + " " + s["text"]}
+        # Dicht beieinander heisst normalerweise: eine Sprechpause mitten im
+        # Satz, die beiden Teile gehoeren zusammen. Es kann aber auch ein
+        # sofortiger Neuansatz sein - Julian sagt denselben Satz gleich noch
+        # einmal, ohne Pause dazwischen. Ungeprueft verschmolzen ergibt das
+        # eine hoerbare Doppelung IM Fenster, gegen die keine Gruppierung mehr
+        # hilft, weil beide Teile schon zu einem Keeper geworden sind:
+        # "Im Business denken die meisten anders. ... Aber im Business denken
+        # die meisten anders." (C0787, 19.08.2026). Deshalb vorher pruefen, ob
+        # der Nachbar den Anfang wiederholt - dann gewinnt der laengere Teil.
+        vorher = merged[-1]
+        wiederholt = (similar(vorher["text"], s["text"]) >= a.merge_sim
+                      or norm(s["text"])[:24] and norm(vorher["text"]).startswith(norm(s["text"])[:24])
+                      or norm(vorher["text"])[:24] and norm(s["text"]).startswith(norm(vorher["text"])[:24]))
+        if wiederholt:
+            if s["end"] - s["start"] > vorher["end"] - vorher["start"]:
+                merged[-1] = dict(s)
+            # sonst: der laengere steht schon drin, der Nachzuegler faellt weg
+        else:
+            merged[-1] = {**vorher, "end": s["end"],
+                          "text": vorher["text"] + " " + s["text"]}
     else:
         merged.append(dict(s))
 
@@ -619,6 +671,14 @@ for grp, win in protokoll:
     })
 json.dump(entscheidungen, open("entscheidungen.json", "w"),
           ensure_ascii=False, indent=1)
+
+# Der Vorfilter wirft Material weg, bisher stand das nur auf der Konsole.
+# Ueber fuenf Videos waren das 34 Segmente - meist zu Recht ("So.", "Yo!"),
+# aber darunter ein kompletter Call-to-Action. Was verworfen wird, gehoert
+# nachlesbar festgehalten.
+json.dump([{"i": x["i"], "start": round(x["start"], 3), "dur": x["dur"],
+            "text": x["text"], "grund": why} for x, why in dropped],
+          open("verworfen_vorfilter.json", "w"), ensure_ascii=False, indent=1)
 
 print(f"{len(segs)} Segmente | {len(dropped)} vorgefiltert | "
       f"Blockgrenze {G:.2f}s -> {n_bloecke} Bloecke | {len(protokoll)} Wiederholungs-Gruppen")

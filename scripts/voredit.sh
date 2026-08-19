@@ -61,7 +61,14 @@ for eintrag in paare:
 
     if not keepers.exists():
         print(f"--- {video.name}: schneiden ---")
-        r = subprocess.run(["bash", str(skill / "run.sh"), str(video)],
+        # Die gute Tonspur gehoert nicht nur ins CapCut-Projekt, sondern
+        # auch in die ANALYSE - sonst trifft die Auswahl ihre Entscheidungen
+        # auf dem schlechteren Mikrofon (19.08.2026).
+        run_cmd = ["bash", str(skill / "run.sh"), str(video)]
+        if eintrag.get("audio"):
+            run_cmd += ["--ton", eintrag["audio"],
+                        "--ton-versatz", str(eintrag.get("versatz", 0.0))]
+        r = subprocess.run(run_cmd,
                            capture_output=True, text=True)
         for zeile in r.stdout.splitlines():
             if any(k in zeile for k in ("Format:", "Sprech-Segmente", "Transkription:", "FEHLER")):

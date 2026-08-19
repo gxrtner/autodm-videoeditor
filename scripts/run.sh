@@ -18,17 +18,19 @@ CUT_SKILL="$HIER/.."
 EDIT_SKILL="$HIER/.."
 GX="$HOME/Videos"
 
-INPUT=""; AUTO=0; STOP_NACH_CUT=0; ZIEL=""
+INPUT=""; AUTO=0; STOP_NACH_CUT=0; ZIEL=""; TON=""; TON_VERSATZ="0"
 while [ $# -gt 0 ]; do
   case "$1" in
     --auto) AUTO=1; shift;;
     --stop-nach-cut) STOP_NACH_CUT=1; shift;;
     --ziel) ZIEL="$2"; shift 2;;
+    --ton) TON="$2"; shift 2;;
+    --ton-versatz) TON_VERSATZ="$2"; shift 2;;
     *) INPUT="$1"; shift;;
   esac
 done
 
-[ -z "$INPUT" ] && { echo "usage: run.sh <rohvideo> [--auto] [--stop-nach-cut] [--ziel <pfad>]"; exit 2; }
+[ -z "$INPUT" ] && { echo "usage: run.sh <rohvideo> [--auto] [--stop-nach-cut] [--ziel <pfad>] [--ton <datei> --ton-versatz <s>]"; exit 2; }
 [ -f "$INPUT" ] || { echo "FEHLER: '$INPUT' nicht gefunden"; exit 1; }
 # Absolut machen - später wird ins Arbeitsverzeichnis gewechselt
 INPUT="$(cd "$(dirname "$INPUT")" && pwd)/$(basename "$INPUT")"
@@ -66,8 +68,80 @@ fi
 mkdir -p "$ZIEL"
 
 # --- 1. Audio ---
+#
+# ZWEI DINGE, beide am 19.08.2026 im Abnahmetest aufgeflogen:
+#
+# 1. QUELLE. Wird der Ton getrennt aufgenommen (Ansteckmikro oder zweite
+#    Kamera), wurde er bisher nur an CapCut durchgereicht - die ANALYSE lief
+#    weiter auf dem Kameramikro. Gemessen ueber fuenf Videos: audio16k.wav
+#    korrelierte mit 1.0000 zur Kamera und mit 0.0067 zur guten Tonspur, die
+#    15 dB lauter war. Die Pipeline hoerte mit dem schlechten Mikro zu und
+#    lieferte mit dem guten aus. --ton schaltet die Analyse auf die gute
+#    Quelle um; --ton-versatz schiebt sie auf die Bildzeitachse, damit alle
+#    Fenster weiter in Videozeit liegen und nichts umgerechnet werden muss.
+#
+# 2. PEGEL. segment.py arbeitet mit absoluten RMS-Schwellen (0.005 / 0.002).
+#    Bei den Testaufnahmen lag der Median der Sprache bei 0.0033 bis 0.0044 -
+#    also UNTER der Einstiegsschwelle. Der Segmentierer stieg zu spaet ein und
+#    zu frueh aus, Satzenden und leise Wortanfaenge fielen weg (9 Faelle in 5
+#    Videos). Die Normalisierung auf einen festen Spitzenpegel bringt jede
+#    Aufnahme in den Bereich, fuer den die Schwellen gedacht sind. Ohne sie
+#    haengt die Schnittqualitaet daran, wie laut jemand aufgenommen hat.
 echo ""; echo "[1/6] Audio extrahieren ..."
-ffmpeg -y -v error -i "$INPUT" -vn -ac 1 -ar 16000 -c:a pcm_s16le audio16k.wav
+if [ -n "$TON" ] && [ ! -f "$TON" ]; then
+  echo "        !! Tonquelle '$TON' nicht gefunden - es wird der Kameraton"
+  echo "           verwendet. Das ist fast immer die schlechtere Spur."
+fi
+if [ -n "$TON" ] && [ -f "$TON" ]; then
+  echo "        Tonquelle: $(basename "$TON") (Versatz ${TON_VERSATZ}s)"
+  if [ "$(python3 -c "print(1 if float('$TON_VERSATZ') >= 0 else 0)")" = "1" ]; then
+    # Tonaufnahme lief schon, als die Kamera startete -> vorne wegschneiden
+    ffmpeg -y -v error -ss "$TON_VERSATZ" -i "$TON" -vn -ac 1 -ar 16000 \
+           -c:a pcm_s16le roh16k.wav
+  else
+    # Tonaufnahme startete spaeter -> Stille voranstellen
+    MS=$(python3 -c "print(int(round(-float('$TON_VERSATZ')*1000)))")
+    ffmpeg -y -v error -i "$TON" -vn -ac 1 -ar 16000 \
+           -af "adelay=${MS}:all=1" -c:a pcm_s16le roh16k.wav
+  fi
+else
+  ffmpeg -y -v error -i "$INPUT" -vn -ac 1 -ar 16000 -c:a pcm_s16le roh16k.wav
+fi
+
+# STATISCHE Anhebung, ein fester Faktor fuer die ganze Datei.
+#
+# Wichtig: KEIN dynaudnorm und kein loudnorm. Die regeln pro Zeitfenster nach
+# und ziehen damit auch die Pausen hoch - im Test wurden aus 46 Segmenten 33
+# und aus 64s Schnitt 156s, weil Atmen und Raumton ueber die Sprachschwelle
+# gehoben wurden. segment.py unterscheidet Sprache von Stille genau ueber
+# diesen Abstand; er muss erhalten bleiben. Ein konstanter Faktor verschiebt
+# beide Seiten gleich und laesst das Verhaeltnis unangetastet.
+python3 - <<'PYNORM'
+import wave, numpy as np
+w = wave.open("roh16k.wav", "rb")
+n, sr = w.getnframes(), w.getframerate()
+a = np.frombuffer(w.readframes(n), dtype=np.int16).astype(np.float32) / 32768.0
+w.close()
+hop = 160
+r = np.sqrt(np.array([np.mean(a[i*hop:(i+1)*hop] ** 2) for i in range(len(a)//hop)]))
+laut = r[r > np.percentile(r, 60)]
+med = float(np.median(laut)) if len(laut) else 0.0
+# Ziel: Sprachmedian bei 0.012, also gut ueber der Einstiegsschwelle 0.005.
+# Nach oben gedeckelt, damit nichts uebersteuert.
+faktor = 1.0
+if med > 1e-6:
+    faktor = min(0.012 / med, 0.95 / max(float(np.max(np.abs(a))), 1e-6))
+    faktor = max(faktor, 1.0)
+b = np.clip(a * faktor, -1.0, 1.0)
+r2 = np.sqrt(np.array([np.mean(b[i*hop:(i+1)*hop] ** 2) for i in range(len(b)//hop)]))
+laut2 = r2[r2 > np.percentile(r2, 60)]
+print(f"        Pegel: Sprachmedian {med:.4f} -> {float(np.median(laut2)):.4f} "
+      f"(Faktor {faktor:.1f}x, Schwelle 0.0050)")
+o = wave.open("audio16k.wav", "wb")
+o.setnchannels(1); o.setsampwidth(2); o.setframerate(sr)
+o.writeframes((b * 32767).astype(np.int16).tobytes()); o.close()
+PYNORM
+rm -f roh16k.wav
 
 # --- 2. Wellenform-Segmente + Transkription pro Segment ---
 # Whisper-Wort-Timestamps sind bei Multi-Take unbrauchbar (Wörter werden über
@@ -80,7 +154,7 @@ else
   echo "[2/6] Sprech-Segmente finden (das dauert am laengsten) ..."
   python3 "$HIER/segment.py" audio16k.wav --gap 0.35 --lang de
   echo "[3/6] Takes wählen (Wiederholungen -> letzte Version) ..."
-  python3 "$HIER/pick_takes.py" --sim 0.68 --head-words 3
+  python3 "$HIER/pick_takes.py" --sim 0.62 --head-words 3
 fi
 
 if [ "$AUTO" = "0" ]; then
