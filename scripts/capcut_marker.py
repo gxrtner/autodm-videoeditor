@@ -18,6 +18,17 @@ Woran eine Stelle als unsicher gilt (aus segments_wave.json + keepers.json):
              eine Aussage komplett fehlen.
   doppelt    Zwei aufeinanderfolgende Fenster beginnen fast gleich - mögliche
              Wiederholung im Schnitt.
+  wahl       Aus mehreren Anläufen wurde gewählt, und eine deutlich LÄNGERE
+             Fassung ist dabei rausgeflogen. Die Automatik nimmt die letzte
+             vollständige Fassung - wenn du die Aussage in der Mitte am besten
+             gesprochen hast, ist die hier verloren gegangen.
+  aufzählung Die zusammengefassten Fassungen unterscheiden sich inhaltlich
+             stark. Dann war es womöglich gar keine Wiederholung, sondern eine
+             Aufzählung ("zwei Reels pro Tag" / "zwei Karussells pro Woche") -
+             und es fehlen Punkte.
+
+Die letzten beiden kommen aus entscheidungen.json, die pick_takes.py neben
+keepers.json schreibt. Fehlt die Datei, entfallen nur diese zwei Marker.
 
 Usage:
   capcut_marker.py "<projekt>" --edit <ordner>_edit [--trocken]
@@ -32,6 +43,7 @@ FARBE = "#00c1cd"          # CapCuts Standard-Markerfarbe
 MIN_DAUER = 0.80
 LUECKE_AB = 8.0
 ÄHNLICH_AB = 0.72
+UNEINIG_AB = 0.45     # ab hier gilt eine Gruppe als inhaltlich uneinig
 
 
 def uid():
@@ -67,9 +79,12 @@ def bricht_ab(text, folgt_direkt):
     return len(t.split()) >= 2
 
 
-def prüfe(segs, keepers):
+def prüfe(segs, keepers, entscheidungen=None):
     """Liefert [(zeit_im_schnitt, grund, text)] - Zeit auf der Timeline."""
     funde = []
+    # Entscheidungen auf den Rohsegment-Index des Siegers abbilden, damit sie
+    # sich dem passenden Fenster zuordnen lassen.
+    nach_sieger = {e["sieger"]["i"]: e for e in (entscheidungen or [])}
     t = 0.0
     vorher_text = None
     for i, k in enumerate(keepers):
@@ -80,6 +95,21 @@ def prüfe(segs, keepers):
 
         if dauer < MIN_DAUER:
             funde.append((t, "kurz", f"{dauer:.2f}s - evtl. Fragment"))
+
+        # --- aus dem Entscheidungsprotokoll ---
+        for s_ in drin:
+            e = nach_sieger.get(s_["i"])
+            if not e:
+                continue
+            if e.get("laengere_verworfen"):
+                funde.append((t, "wahl",
+                              f'aus {e["anlaeufe"]} Anläufen - eine '
+                              f'{e["laengste_verworfene_dauer"]}s lange Fassung flog raus'))
+            elif e.get("inhaltlich_uneinig", 0) >= UNEINIG_AB and e["anlaeufe"] >= 2:
+                funde.append((t, "aufzählung",
+                              f'{e["anlaeufe"]} Fassungen zusammengefasst, aber '
+                              f'inhaltlich verschieden - evtl. eigene Punkte'))
+            break
 
         # Schließt das nächste Fenster im ROHMATERIAL direkt an?
         folgt_direkt = (i + 1 < len(keepers)
@@ -141,7 +171,9 @@ def main():
 
     segs = json.load(open(edit / "segments_wave.json"))
     keepers = json.load(open(edit / "keepers.json"))
-    funde = prüfe(segs, keepers)
+    ent_pfad = Path(a.edit) / "entscheidungen.json"
+    entscheidungen = json.load(open(ent_pfad)) if ent_pfad.exists() else None
+    funde = prüfe(segs, keepers, entscheidungen)
 
     if not funde:
         print("Keine brenzligen Stellen gefunden.")
