@@ -128,6 +128,6 @@ else
     die Segment-Texte in <name>_edit/segments_wave.json.
     Prüfen, bei Bedarf korrigieren, dann:
 
-      bash $SKILL/voredit.sh "$ORDNER" --auto --original --original
+      bash $SKILL/voredit.sh "$ORDNER" --auto --original
 EOF
 fi
