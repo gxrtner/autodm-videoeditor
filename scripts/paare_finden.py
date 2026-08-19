@@ -13,7 +13,7 @@ so gross, dass die Zuordnung eindeutig ist.
 Usage:
   paare_finden.py <ordner> [--json paare.json]
 """
-import argparse, json, os, subprocess, sys, tempfile
+import argparse, re, json, os, subprocess, sys, tempfile
 from pathlib import Path
 
 VIDEO_ENDUNGEN = {".mp4", ".mov", ".m4v"}
@@ -60,6 +60,78 @@ def versatz(video_env, audio_env):
     return (k - (len(video_env) - 1)) * 0.01, float(c[k])
 
 
+
+def tonpegel(datei):
+    """Mittlerer Lautstaerkepegel in dB. Wird gebraucht, um bei zwei Kameras
+    zu entscheiden, welche den brauchbaren Ton hat."""
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-ss", "30", "-t", "30", "-i", str(datei),
+             "-af", "volumedetect", "-f", "null", "-"],
+            capture_output=True, text=True)
+        m = re.search(r"mean_volume:\s*(-?[\d.]+) dB", r.stderr)
+        return float(m.group(1)) if m else None
+    except Exception:
+        return None
+
+
+def ton_ausziehen(video, ziel):
+    """Tonspur verlustfrei aus einem Video herausloesen.
+
+    Bei einem Zwei-Kamera-Aufbau ist die Tonquelle selbst ein Video von
+    mehreren Gigabyte. Die komplette Datei als "Mikro-Aufnahme" ins Projekt zu
+    kopieren waere Unsinn - die Tonspur allein sind ein paar Megabyte.
+    """
+    if ziel.exists():
+        return ziel
+    r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(video),
+                        "-vn", "-c:a", "copy", str(ziel)],
+                       capture_output=True, text=True)
+    if r.returncode != 0 or not ziel.exists():
+        # Manche Codecs lassen sich nicht 1:1 in eine m4a legen - dann neu
+        # kodieren, hoerbar ist der Unterschied bei Sprache nicht.
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(video),
+                        "-vn", "-c:a", "aac", "-b:a", "192k", str(ziel)],
+                       capture_output=True, text=True)
+    return ziel if ziel.exists() else None
+
+
+def kamerapaare(videos, ev, pegel, min_guete, min_abstand=6.0):
+    """Findet Video-Paare aus einem Zwei-Kamera-Aufbau.
+
+    Zwei Kameras laufen gleichzeitig, eine hat den besseren Ton (Ansteckmikro,
+    naeher dran). Erkannt wird das an zwei Dingen: die Tonspuren korrelieren
+    hoch (dieselbe Szene), und die Pegel unterscheiden sich deutlich.
+
+    Der Pegelabstand ist die Sicherung. Ohne ihn wuerden zwei Aufnahmen
+    derselben Szene mit gleichwertigem Ton zusammengelegt und eine davon als
+    blosse Tonquelle verheizt - obwohl es zwei brauchbare Perspektiven sind.
+    Rueckgabe: {bildvideo: (tonvideo, versatz, guete)}
+    """
+    paare, vergeben = {}, set()
+    for i, a in enumerate(videos):
+        if a in vergeben or a not in ev:
+            continue
+        for b in videos[i + 1:]:
+            if b in vergeben or b not in ev:
+                continue
+            off, g = versatz(ev[a], ev[b])
+            if g < min_guete:
+                continue
+            pa, pb = pegel.get(a), pegel.get(b)
+            if pa is None or pb is None or abs(pa - pb) < min_abstand:
+                continue
+            # Lauterer Ton gewinnt als Tonquelle, das andere liefert das Bild.
+            if pa > pb:
+                bild, ton, vs = b, a, -off
+            else:
+                bild, ton, vs = a, b, off
+            paare[bild] = (ton, vs, g)
+            vergeben.update({a, b})
+            break
+    return paare
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("ordner")
@@ -80,6 +152,7 @@ def main():
     if not audios:
         print("Keine externen Aufnahmen - es wird der Kameraton verwendet.")
 
+    ea_extra = {}
     ev = {}
     for v in videos:
         e = huellkurve(str(v))
@@ -87,6 +160,28 @@ def main():
             print(f"  !! Ton nicht lesbar: {v.name}")
         else:
             ev[v] = e
+
+    # --- Zwei-Kamera-Aufbau erkennen ---
+    kam = {}
+    if not audios and len(videos) >= 2:
+        pegel = {v: tonpegel(v) for v in ev}
+        kam = kamerapaare(videos, ev, pegel, GUETE_MIN)
+        if kam:
+            print(f"\n{len(kam)} Kamerapaare erkannt "
+                  f"(zwei Kameras, Ton von der mit dem besseren Pegel):")
+            for bild, (ton, vs, g) in kam.items():
+                print(f"  Bild {bild.name:22s} Ton {ton.name:22s} "
+                      f"{pegel[bild]:6.1f} dB vs {pegel[ton]:6.1f} dB  "
+                      f"{vs:+6.2f}s  Guete {g:.2f}")
+                spur = ton.with_suffix(".tonspur.m4a")
+                if ton_ausziehen(ton, spur):
+                    audios.append(spur)
+                    ea_extra[bild] = spur
+                else:
+                    print(f"    !! Ton konnte nicht ausgezogen werden: {ton.name}")
+            # Die Tonkameras sind keine eigenstaendigen Videos mehr.
+            videos = [v for v in videos if v not in {t for t, _, _ in kam.values()}]
+            print()
     ea = {p: huellkurve(str(p)) for p in audios}
     ea = {k: v for k, v in ea.items() if v is not None}
 
@@ -94,6 +189,16 @@ def main():
     for v in videos:
         if v not in ev:
             ergebnis.append({"video": str(v), "audio": None, "versatz": 0.0, "güte": 0.0})
+            continue
+        # Bei erkanntem Kamerapaar steht die Zuordnung schon fest - dann nicht
+        # noch einmal raten, sondern den ausgezogenen Ton direkt nehmen.
+        if v in ea_extra:
+            ton, vs, g = kam[v][0], kam[v][1], kam[v][2]
+            print(f"  {v.name:26s} <- {ea_extra[v].name:28s} {vs:+7.2f}s  "
+                  f"Güte {g:.2f}  (zweite Kamera)")
+            ergebnis.append({"video": str(v), "audio": str(ea_extra[v]),
+                             "versatz": round(vs, 3), "güte": round(g, 3),
+                             "quelle": "zweite kamera", "tonvideo": str(ton)})
             continue
         best = (None, 0.0, -1.0)
         for p, e in ea.items():

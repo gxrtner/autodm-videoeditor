@@ -252,6 +252,10 @@ def main():
     ap.add_argument("--musik")
     ap.add_argument("--name")
     ap.add_argument("--audio", help="externe Mikro-Aufnahme (wird automatisch synchronisiert)")
+    ap.add_argument("--original", action="store_true",
+                    help="Quellvideo NICHT als 1080p-Arbeitsfassung kopieren, "
+                         "sondern direkt referenzieren - volle Aufloesung, kein "
+                         "Speicherplatz, Rohmaterial bleibt im Projekt greifbar")
     ap.add_argument("--audio-spur", action="store_true",
                     help="Stimme als EIGENE Audiospur unter dem Bild statt ins Video gemischt; der Kameraton am Clip wird stummgeschaltet")
     # Julian filmt den CTA oft als EIGENE Aufnahme (06.08.2026, "koffein +
@@ -336,9 +340,26 @@ def main():
         # bleibt am Clip, wird aber stummgeschaltet - so hat er die Stimme
         # als eigene, bearbeitbare Spur.
         gemuxt = None if a.audio_spur else mikro
-        lokal = ins_projekt(quelle, medien, als_proxy=True, audio=gemuxt,
-                            audio_off=off,
-                            proxy_name=f"quelle{nr}.mp4" if len(teile) > 1 else None)
+        # --original (19.08.2026): Standard war immer eine 1080p-Arbeitsfassung,
+        # weil CapCut auf beliebige Ordner keinen Zugriff hat und 4K-Kopien die
+        # Platte sprengen. Beides trifft nicht immer zu: liegt das Material in
+        # einem Ordner, den CapCut lesen darf (~/Documents, ~/Movies), kann es
+        # direkt referenziert werden - dann bleibt die volle Aufloesung erhalten,
+        # es wird nichts umkodiert, und das ungeschnittene Rohmaterial steht im
+        # Projekt zur Verfuegung. Das ist wichtig, weil die Marker auf verworfene
+        # Takes zeigen, die der Nutzer nur dann noch reinziehen kann.
+        # Bedingung: kein Ton zum Einmischen, sonst muss ohnehin kodiert werden.
+        if a.original and not gemuxt:
+            lokal = str(Path(quelle).resolve())
+            print(f"  Original referenziert (keine Kopie): {Path(quelle).name}")
+        else:
+            if a.original and gemuxt:
+                print("  --original ignoriert: der Ton muss ins Bild gemischt "
+                      "werden, dafuer ist ein Umkodieren noetig (--audio-spur "
+                      "vermeidet das)")
+            lokal = ins_projekt(quelle, medien, als_proxy=True, audio=gemuxt,
+                                audio_off=off,
+                                proxy_name=f"quelle{nr}.mp4" if len(teile) > 1 else None)
         if a.audio_spur and mikro:
             tonstücke.append((mikro, off, kp, t))
         info_lokal = video_info(lokal)

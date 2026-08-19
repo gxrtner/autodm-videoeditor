@@ -10,19 +10,23 @@
 #
 # Usage:
 #   voredit.sh <ordner>          Schneiden und Auswahl zeigen (Gate)
-#   voredit.sh <ordner> --auto   Nach der Freigabe: Export + Untertitel
+#   voredit.sh <ordner> --auto   Nach der Freigabe: Export ins CapCut-Projekt
+#   --original                   Quellvideo direkt referenzieren statt es als
+#                                1080p-Arbeitsfassung zu kopieren
 set -euo pipefail
 export PATH="$HOME/bin:$PATH"
 
 SKILL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ORDNER=""; AUTO=0
+ORIGINAL=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --auto) AUTO=1; shift;;
+    --original) ORIGINAL=1; shift;;
     *) ORDNER="$1"; shift;;
   esac
 done
-[ -z "$ORDNER" ] && { echo "usage: voredit.sh <ordner> [--auto]"; exit 2; }
+[ -z "$ORDNER" ] && { echo "usage: voredit.sh <ordner> [--auto] [--original]"; exit 2; }
 [ -d "$ORDNER" ] || { echo "FEHLER: '$ORDNER' ist kein Ordner"; exit 1; }
 ORDNER="$(cd "$ORDNER" && pwd)"
 
@@ -40,11 +44,12 @@ else
 fi
 echo
 
-VOREDIT_SKRIPTE="$SKILL" python3 - "$ORDNER" "$PAARE" "$AUTO" <<'PY'
+VOREDIT_SKRIPTE="$SKILL" python3 - "$ORDNER" "$PAARE" "$AUTO" "$ORIGINAL" <<'PY'
 import json, os, subprocess, sys
 from pathlib import Path
 
 ordner, paare_datei, auto = Path(sys.argv[1]), sys.argv[2], sys.argv[3] == "1"
+original = len(sys.argv) > 4 and sys.argv[4] == "1"
 skill = Path(os.environ["VOREDIT_SKRIPTE"])
 paare = json.load(open(paare_datei))
 
@@ -79,6 +84,12 @@ for eintrag in paare:
         # Stimme als EIGENE Spur unter dem Bild, Kameraton stumm - so kann der
         # Nutzer den Ton in CapCut getrennt bearbeiten (Julian 11.08.2026).
         cmd += ["--audio", eintrag["audio"], "--audio-spur"]
+    if original:
+        # Quellvideo direkt referenzieren statt als 1080p-Arbeitsfassung zu
+        # kopieren: volle Aufloesung, kein Speicherplatz, und das ungeschnittene
+        # Rohmaterial bleibt im Projekt greifbar - wichtig, weil die Marker auf
+        # verworfene Takes zeigen, die der Nutzer dann noch reinziehen kann.
+        cmd += ["--original"]
     r = subprocess.run(cmd, capture_output=True, text=True)
     projekt = None
     for zeile in r.stdout.splitlines():
