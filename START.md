@@ -10,12 +10,16 @@ Ich habe das Paket "autodm-videoeditor" in ~/.claude/skills/autodm-videoeditor
 liegen. Lies dort SKILL.md und führe mich Schritt für Schritt durch.
 
 Mein Ziel: Ich gebe dir einen Google-Drive-Link mit Rohmaterial (Videos, evtl.
-dazu getrennt aufgenommene Tonspuren). Du lädst das herunter, schneidest es
-und legst mir pro Video ein fertiges CapCut-Projekt an.
+dazu getrennt aufgenommene Tonspuren oder eine zweite Kamera). Du lädst das
+herunter, schneidest es und legst mir pro Video ein fertiges CapCut-Projekt an.
 
 Bitte:
 - Prüfe zuerst, ob alles eingerichtet ist. Wenn nicht, sag mir was zu tun ist.
 - Erklär mir kurz, was du gerade machst - ich bin kein Entwickler.
+- Lies die Take-Auswahl gegen, bevor du die Projekte baust. Das steht so in
+  SKILL.md und ist der Schritt, der über die Qualität entscheidet - bitte
+  nicht überspringen. Zeig mir danach, was du korrigiert hast.
+- Nimm beim Anlegen --original, damit meine Auflösung erhalten bleibt.
 - Sag mir vorher Bescheid, wenn ich CapCut schließen muss.
 - Zeig mir am Ende, was du gefunden hast und wo ich nachschauen sollte.
 ```

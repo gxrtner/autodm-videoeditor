@@ -88,12 +88,31 @@ Claude Code ein. Ab hier führt Claude dich.
 **Claude:**
 
 1. lädt das Rohmaterial herunter
-2. ordnet Tonaufnahmen den Videos zu
-3. schneidet
-4. zeigt dir die Auswahl und fragt, ob es weitermachen soll
-5. legt pro Video ein CapCut-Projekt an
+2. ordnet Tonaufnahmen den Videos zu - auch eine zweite Kamera, wenn du so
+   filmst; genommen wird die Spur mit dem besseren Ton
+3. schneidet und schlägt je Aussage einen Take vor
+4. **liest die Auswahl gegen und korrigiert sie** - das ist der Schritt, der
+   den Unterschied macht, siehe unten
+5. zeigt dir, was es geändert hat
+6. legt pro Video ein CapCut-Projekt an, mit Markern auf den Reststellen
 
 **Du:** öffnest CapCut und feilst nach.
+
+### Warum Claude die Auswahl gegenliest
+
+Die Skripte entscheiden auf Textähnlichkeit und Dauer. Was ein Satz *bedeutet*,
+sehen sie nicht. Gemessen an 21 von Hand korrigierten Läufen trifft der
+Vorschlag rund 85 Prozent der richtigen Takes - die fehlenden 15 Prozent sind
+der Unterschied zwischen einem Video, das du posten kannst, und einem, das
+mitten im Satz aufhört.
+
+Deshalb hält die Pipeline nach dem Schnitt an. Claude liest den Schnitt als
+durchgehenden Text, sucht Fragmente, Wiederholungen, falsch gewählte Takes und
+fehlende Aussagen, korrigiert `keepers.json` und sagt dir, was es geändert hat.
+Erst danach entsteht das Projekt.
+
+Das ist kein optionaler Zwischenschritt, den man überspringen kann. Es ist der
+Grund, warum das Ergebnis brauchbar wird.
 
 ### Beim ersten Mal: Google Drive verbinden
 
@@ -113,7 +132,8 @@ Das ist einmalig. Danach kennt rclone deinen Drive.
 | Download | je nach Leitung, bei 3 GB etwa 5-10 Min |
 | Tonzuordnung | wenige Sekunden je Video |
 | Schnitt | ~15 Sek je Video auf M-Chip, deutlich länger auf Intel |
-| Projekt anlegen | 1-2 Min je Video (die Arbeitsfassung wird berechnet) |
+| Auswahl gegenlesen | 1-2 Min je Video |
+| Projekt anlegen | wenige Sekunden mit `--original`, sonst 1-2 Min |
 
 ### Wichtig: CapCut muss geschlossen sein
 
@@ -129,20 +149,27 @@ ins Leere zu arbeiten.
 
 ## 4. Die Marker
 
-**Das ist der wichtigste Abschnitt.** Der Schnitt läuft vollautomatisch und
-liegt nicht immer richtig. Statt das ganze Video zu prüfen, springst du in
-CapCut von Marker zu Marker - normalerweise drei bis sieben Stellen.
+Nachdem Claude die Auswahl gegengelesen hat, bleiben Stellen übrig, die auch
+Claude nicht entscheiden kann - etwa welche von zwei gleichwertigen Fassungen
+dir besser gefällt. Dort sitzen die Marker. Du springst in CapCut von Marker zu
+Marker, normalerweise vier bis acht Stellen.
+
+**Sie sind ein Hinweis, keine vollständige Fehlerliste.** Sieh dir das Video
+einmal ganz an, bevor du postest.
 
 Marker siehst du in CapCut als kleine Fähnchen über der Zeitleiste. Sie heißen
 `! grund: info`.
 
 | Marker | Was er bedeutet | Was du prüfst |
 |---|---|---|
-| `! dicht` | Kurz vorher lag ein sehr ähnlicher Take | Ist der behaltene wirklich der bessere? |
+| `! wahl` | Aus mehreren Anläufen wurde gewählt, und eine deutlich längere Fassung flog raus | Der bessere Take liegt noch im Rohmaterial - reinziehen |
+| `! echo` | Innerhalb eines Fensters wird derselbe Satz zweimal gesprochen | Ohne Pause neu angesetzt - hier von Hand trennen |
+| `! ungeprüft` | Das Fenster hatte keine Vergleichsfassung, die Auswahl konnte nichts abwägen | Sieht nach Bruchstück aus - gehört das rein? |
 | `! abbruch` | Der Satz bricht mitten drin ab | Fehlt hinten etwas? |
-| `! lücke` | Davor wurde viel Rohmaterial verworfen | Fehlt eine ganze Aussage? |
+| `! dicht` | Kurz vorher lag ein sehr ähnlicher Take | Ist der behaltene wirklich der bessere? |
+| `! aufzählung` | Mehrere Fassungen wurden zusammengefasst, unterscheiden sich aber inhaltlich | Waren das eigene Punkte statt Wiederholungen? |
+| `! lücke` | Davor wurde viel Sprache verworfen | Fehlt eine ganze Aussage? |
 | `! kurz` | Fenster unter 0,8 Sekunden | Ist das eine Aussage oder nur ein Fragment? |
-| `! doppelt` | Zwei Fenster beginnen fast gleich | Steht etwas doppelt drin? |
 
 Alles zwischen den Markern hat die Automatik als eindeutig eingestuft. Das
 stimmt meistens - aber „meistens" ist nicht „immer". Wenn dir beim Ansehen etwas
@@ -182,10 +209,17 @@ Damit leise Satzenden nicht abgeschnitten werden, arbeitet die Erkennung mit
 zwei Schwellen: Sie steigt bei normaler Lautstärke ein und erst deutlich später
 wieder aus.
 
-### Take-Auswahl: der letzte vollständige gewinnt
+### Take-Auswahl: blockweise, der letzte brauchbare gewinnt
 
-Sprichst du einen Satz mehrfach, behält das Werkzeug den **letzten
-vollständigen**. Erkannt wird das über Textähnlichkeit und gleiche
+Du nimmst in Blöcken auf: mehrfach ansetzen, dann eine längere Pause, dann der
+nächste Gedanke. Genau so wertet das Werkzeug aus - es bestimmt die Blockgrenze
+aus deinen eigenen Pausenlängen und sucht innerhalb eines Blocks die beste
+Fassung, statt global Textpaare zu vergleichen.
+
+Innerhalb eines Blocks gewinnt der **letzte Take, der noch vollständig ist**.
+Ein Fehlstart am Ende kann also nicht gewinnen, nur weil er der letzte war -
+das war früher die häufigste Fehlerquelle. Erkannt wird das über Textähnlichkeit
+und gleiche
 Satzanfänge - Letzteres aber nur innerhalb von 30 Sekunden.
 
 Diese Zeitgrenze ist wichtig: Parallel gebaute Sätze („Wenn du mehr *Views*
@@ -269,7 +303,12 @@ unangetastet.
 S=~/.claude/skills/autodm-videoeditor/scripts
 
 bash $S/voredit.sh ~/Videos/mein-ordner            # schneiden, dann Stopp
-bash $S/voredit.sh ~/Videos/mein-ordner --auto     # Projekte anlegen
+bash $S/voredit.sh ~/Videos/mein-ordner --auto --original   # Projekte anlegen
+
+# --original referenziert das Quellvideo direkt statt es als 1080p-Arbeits-
+# fassung zu kopieren: volle Aufloesung, kein Speicherplatz, und das ganze
+# Rohmaterial bleibt im Projekt greifbar. Weglassen nur, wenn das Material
+# auf einer externen Platte liegt, auf die CapCut keinen Zugriff hat.
 ```
 
 ### Die Zwischendateien
@@ -281,9 +320,11 @@ Je Video entsteht ein Ordner `<name>_edit`:
 | `audio16k.wav` | die extrahierte Tonspur |
 | `segments_wave.json` | alle Sprechblöcke mit Text und Zeiten |
 | `keepers.json` | die ausgewählten Fenster - **hier korrigierst du von Hand** |
+| `entscheidungen.json` | je Gruppe: welcher Take gewann, welche verworfen wurden |
+| `verworfen_vorfilter.json` | was schon vor der Auswahl aussortiert wurde |
 
 Willst du den Schnitt ändern, bearbeite `keepers.json` (jeder Eintrag ist ein
-Fenster mit `a` = Start und `b` = Ende in Sekunden) und lass `--auto` erneut
+Fenster mit `a` = Start und `b` = Ende in Sekunden) und lass `--auto --original` erneut
 laufen.
 
 ### Stellschrauben
@@ -296,7 +337,7 @@ python3 $S/segment.py audio16k.wav --gap 0.35 --thr 0.005
 - `--thr` - ab welcher Lautstärke etwas als Sprache gilt
 
 ```bash
-python3 $S/pick_takes.py --sim 0.68 --window 30
+python3 $S/pick_takes.py --sim 0.62
 ```
 
 - `--sim` - ab welcher Textähnlichkeit zwei Takes als derselbe Satz gelten
