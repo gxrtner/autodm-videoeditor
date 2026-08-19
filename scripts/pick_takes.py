@@ -146,7 +146,13 @@ import json, argparse, re, math
 from difflib import SequenceMatcher
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--sim", type=float, default=0.68, help="Schwelle über Blockgrenzen hinweg")
+# 0.62 statt 0.68 (19.08.2026): Julian formuliert bei jedem Anlauf leicht
+# anders ("unterschiedliche Trainingsplaene" gegen "den richtigen Plan"),
+# dadurch lagen drei Fassungen derselben Aussage bei 0.652 und 0.660 - alle
+# knapp unter dem alten Tor, alle drei standen im fertigen Schnitt. Gemessen
+# an den 21 handkorrigierten Laeufen: F1 0.842 -> 0.848, ein Segment weniger
+# zuviel, Ausbeute unveraendert 0.922 - es geht nichts verloren.
+ap.add_argument("--sim", type=float, default=0.62, help="Schwelle über Blockgrenzen hinweg")
 ap.add_argument("--head-words", type=int, default=3, help="gleiche Anfangswörter -> selbe Zeile")
 ap.add_argument("--min-dur", type=float, default=0.8, help="kürzere Segmente nur behalten wenn eigenstaendig")
 ap.add_argument("--ansagen-behalten", action="store_true",
